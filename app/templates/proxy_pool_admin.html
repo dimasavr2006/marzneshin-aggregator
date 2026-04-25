@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Pool Admin</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        .section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .section h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .badge-bridge { background: #e3f2fd; color: #1976d2; }
+        .badge-external { background: #f3e5f5; color: #7b1fa2; }
+        .badge-active { background: #e8f5e9; color: #388e3c; }
+        .badge-inactive { background: #ffebee; color: #c62828; }
+        .actions { display: flex; gap: 5px; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 8px; padding: 30px; width: 90%; max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { margin: 0; }
+        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Proxy Pool Admin</h1>
+
+    <div class="section">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Subscriptions</h2>
+            <button class="btn btn-primary" onclick="openModal()">+ Add Subscription</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Routing</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in subscriptions %}
+                <tr>
+                    <td>{{ sub.id }}</td>
+                    <td>{{ sub.name }}</td>
+                    <td>{{ sub.type }}</td>
+                    <td><span class="badge badge-{{ sub.category }}">{{ sub.category }}</span></td>
+                    <td>{{ sub.routing_mode }}</td>
+                    <td><span class="badge badge-{{ 'active' if sub.is_active else 'inactive' }}">{{ 'Active' if sub.is_active else 'Inactive' }}</span></td>
+                    <td class="actions">
+                        <button class="btn btn-secondary" onclick="syncSub({{ sub.id }})">Sync</button>
+                        <button class="btn btn-danger" onclick="deleteSub({{ sub.id }})">Delete</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align: center; color: #999;">No subscriptions found</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Proxy Pool Servers</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Protocol</th>
+                    <th>Address</th>
+                    <th>Port</th>
+                    <th>Latency</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for srv in servers %}
+                <tr>
+                    <td>{{ srv.id }}</td>
+                    <td>{{ srv.name or '-' }}</td>
+                    <td>{{ srv.protocol or '-' }}</td>
+                    <td>{{ srv.address or '-' }}</td>
+                    <td>{{ srv.port or '-' }}</td>
+                    <td>{{ srv.latency_ms or '-' }} ms</td>
+                    <td><span class="badge badge-{{ 'active' if srv.is_available else 'inactive' }}">{{ 'Available' if srv.is_available else 'Unavailable' }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align: center; color: #999;">No servers found</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add Subscription</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="addForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" required placeholder="My Bridge">
+                </div>
+                <div class="form-group">
+                    <label>URL</label>
+                    <input type="text" name="url" required placeholder="vless://uuid@host:port?...">
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select name="type">
+                        <option value="vless">VLESS</option>
+                        <option value="vmess">VMess</option>
+                        <option value="trojan">Trojan</option>
+                        <option value="subscription">Subscription URL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category">
+                        <option value="bridge">Bridge</option>
+                        <option value="external">External VPN</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Routing Mode</label>
+                    <select name="routing_mode">
+                        <option value="both">Both</option>
+                        <option value="direct">Direct</option>
+                        <option value="via_node">Via Node</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Subscription</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/proxy-pool';
+
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        document.getElementById('addForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            data.is_active = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/subscriptions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const err = await res.json();
+                    alert('Error: ' + (err.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
+
+        async function deleteSub(id) {
+            if (!confirm('Delete subscription #' + id + '?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/subscriptions/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                if (res.ok) location.reload();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function syncSub(id) {
+            try {
+                const res = await fetch(`${API_BASE}/subscriptions/${id}/sync`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                if (res.ok) location.reload();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

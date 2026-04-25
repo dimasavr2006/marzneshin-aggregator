@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription — {{ user.username }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        h1 { margin-top: 0; color: #333; }
+        .section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .section h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .link-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .link-item:last-child { border-bottom: none; }
+        .link-text { flex: 1; font-family: monospace; font-size: 12px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-copy { background: #e3f2fd; color: #1976d2; }
+        .btn-qr { background: #f3e5f5; color: #7b1fa2; }
+        .badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+        .badge-direct { background: #e8f5e9; color: #388e3c; }
+        .badge-bridge { background: #e3f2fd; color: #1976d2; }
+        .badge-external { background: #f3e5f5; color: #7b1fa2; }
+        .status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-weight: 600; font-size: 14px; }
+        .status-active { background: #e8f5e9; color: #388e3c; }
+        .status-inactive { background: #ffebee; color: #c62828; }
+        .user-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .info-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .info-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-value { font-size: 18px; font-weight: 600; color: #333; margin-top: 4px; }
+        .qr-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: none; z-index: 9999; text-align: center; }
+        .qr-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 9998; }
+        .latency { font-size: 11px; color: #888; margin-left: 8px; }
+        .latency-good { color: #388e3c; }
+        .latency-mid { color: #f57c00; }
+        .latency-bad { color: #c62828; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <h1>Subscription — {{ user.username }}</h1>
+
+    <div class="user-info">
+        <div class="info-card">
+            <div class="info-label">Status</div>
+            <div class="info-value"><span class="status {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">{{ 'Active' if user.is_active else 'Inactive' }}</span></div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">Data Used</div>
+            <div class="info-value">{{ user.used_traffic | bytesformat }}</div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">Data Limit</div>
+            <div class="info-value">{% if not user.data_limit %}∞{% else %}{{ user.data_limit | bytesformat }}{% endif %}</div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">Expiration</div>
+            <div class="info-value">
+                {% if user.expire_strategy == "never" %}Never{% elif user.expire_strategy == "start_on_first_use" %}{{ user.usage_duration // 3600 // 24 }}d after first use{% else %}{{ user.expire_date | datetime }}{% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if direct_links %}
+    <div class="section">
+        <h2><span class="badge badge-direct">DIRECT</span> Your Servers</h2>
+        {% for link in direct_links %}
+        <div class="link-item">
+            <span class="link-text">{{ link }}</span>
+            <button class="btn btn-copy" onclick="copyLink(this, '{{ link }}')">Copy</button>
+            <button class="btn btn-qr" onclick="showQR('{{ link }}')">QR</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if bridge_links %}
+    <div class="section">
+        <h2><span class="badge badge-bridge">BRIDGE</span> Bridge Servers</h2>
+        {% for link in bridge_links %}
+        <div class="link-item">
+            <span class="link-text">{{ link }}</span>
+            <button class="btn btn-copy" onclick="copyLink(this, '{{ link }}')">Copy</button>
+            <button class="btn btn-qr" onclick="showQR('{{ link }}')">QR</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if external_links %}
+    <div class="section">
+        <h2><span class="badge badge-external">EXTERNAL</span> External VPN</h2>
+        {% for link in external_links %}
+        <div class="link-item">
+            <span class="link-text">{{ link }}</span>
+            <button class="btn btn-copy" onclick="copyLink(this, '{{ link }}')">Copy</button>
+            <button class="btn btn-qr" onclick="showQR('{{ link }}')">QR</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="qr-overlay" id="qrOverlay" onclick="closeQR()"></div>
+    <div class="qr-popup" id="qrPopup">
+        <div id="qrCodeContainer"></div>
+        <button class="btn" onclick="closeQR()" style="margin-top: 15px;">Close</button>
+    </div>
+
+    <script>
+        function copyLink(btn, link) {
+            navigator.clipboard.writeText(link).then(() => {
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 1500);
+            });
+        }
+        function showQR(link) {
+            const container = document.getElementById('qrCodeContainer');
+            container.innerHTML = '';
+            new QRCode(container, { text: link, width: 256, height: 256 });
+            document.getElementById('qrOverlay').style.display = 'block';
+            document.getElementById('qrPopup').style.display = 'block';
+        }
+        function closeQR() {
+            document.getElementById('qrOverlay').style.display = 'none';
+            document.getElementById('qrPopup').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

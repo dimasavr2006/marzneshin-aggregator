@@ -29,7 +29,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: dimasavr2006/marzneshin-aggregator
+          images: dimasavr/marzneshin-aggregator
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}

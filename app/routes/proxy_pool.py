@@ -9,6 +9,7 @@ from app.models.proxy_pool import (
     ExternalSubscriptionCreate,
     ExternalSubscriptionModify,
     ExternalSubscriptionResponse,
+    ProxyPoolServerResponse,
 )
 from app.utils.vless_parser import parse_vless
 from app.utils.subscription_parser import parse_subscription
@@ -89,6 +90,22 @@ def get_subscription(
         raise HTTPException(status_code=404, detail="Subscription not found")
     check_subscription_owner(sub, admin)
     return sub
+
+
+@router.get("/subscriptions/{sub_id}/servers", response_model=list[ProxyPoolServerResponse])
+def get_subscription_servers(
+    sub_id: int,
+    db: DBDep,
+    admin: AdminDep,
+):
+    """Get all servers for a subscription."""
+    sub = crud.get_external_subscription(db, sub_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    check_subscription_owner(sub, admin)
+    
+    servers = crud.get_proxy_pool_servers(db, subscription_id=sub_id)
+    return servers
 
 
 @router.put("/subscriptions/{sub_id}", response_model=ExternalSubscriptionResponse)

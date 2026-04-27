@@ -1,4 +1,14 @@
 {
+  "proxy_pools": "Proxy Pool",
+  "category": "Category",
+  "type": "Type",
+  "never": "Never",
+  "routing_mode": "Routing Mode",
+  "routing_mode.direct": "Direct",
+  "routing_mode.via_node": "Via Node",
+  "routing_mode.both": "Both",
+  "category.bridge": "Bridge",
+  "category.external": "External",
   "name": "Name",
   "info": "Info",
   "status": "Status",
@@ -89,6 +99,40 @@
       "total-traffics": {
         "title": "Total System Traffic",
         "desc": "Traffics combined from all nodes"
+      }
+    },
+    "proxy-pools": {
+      "title": "Proxy Pool",
+      "routing_mode": "Routing Mode",
+      "last_sync": "Last Sync",
+      "sync": {
+        "action": "Sync",
+        "success": "Subscription synced successfully",
+        "error": "Failed to sync subscription"
+      },
+      "test": {
+        "action": "Test Latency",
+        "success": "Latency tested for {{count}} servers",
+        "error": "Failed to test latency"
+      },
+      "latency": "Latency",
+      "servers": {
+        "title": "Servers",
+        "count": "servers"
+      },
+      "dialogs": {
+        "creation": {
+          "title": "Create Subscription"
+        },
+        "edition": {
+          "title": "Edit Subscription"
+        },
+        "servers": {
+          "title": "Servers"
+        }
+      },
+      "fields": {
+        "url": "URL"
       }
     },
     "settings": {

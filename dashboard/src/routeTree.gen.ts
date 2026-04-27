@@ -20,6 +20,8 @@ import { Route as DashboardUsersCreateImport } from './routes/_dashboard/users/c
 import { Route as DashboardUsersUserIdImport } from './routes/_dashboard/users/$userId'
 import { Route as DashboardServicesCreateImport } from './routes/_dashboard/services/create'
 import { Route as DashboardServicesServiceIdImport } from './routes/_dashboard/services/$serviceId'
+import { Route as DashboardProxyPoolsCreateImport } from './routes/_dashboard/proxy-pools/create'
+import { Route as DashboardProxyPoolsPoolIdImport } from './routes/_dashboard/proxy-pools/$poolId'
 import { Route as DashboardNodesCreateImport } from './routes/_dashboard/nodes/create'
 import { Route as DashboardNodesNodeIdImport } from './routes/_dashboard/nodes/$nodeId'
 import { Route as DashboardHostsHostIdImport } from './routes/_dashboard/hosts/$hostId'
@@ -34,6 +36,9 @@ import { Route as DashboardUsersUserIdEditImport } from './routes/_dashboard/use
 import { Route as DashboardUsersUserIdDeleteImport } from './routes/_dashboard/users/$userId/delete'
 import { Route as DashboardServicesServiceIdEditImport } from './routes/_dashboard/services/$serviceId/edit'
 import { Route as DashboardServicesServiceIdDeleteImport } from './routes/_dashboard/services/$serviceId/delete'
+import { Route as DashboardProxyPoolsPoolIdServersImport } from './routes/_dashboard/proxy-pools/$poolId/servers'
+import { Route as DashboardProxyPoolsPoolIdEditImport } from './routes/_dashboard/proxy-pools/$poolId/edit'
+import { Route as DashboardProxyPoolsPoolIdDeleteImport } from './routes/_dashboard/proxy-pools/$poolId/delete'
 import { Route as DashboardNodesNodeIdEditImport } from './routes/_dashboard/nodes/$nodeId/edit'
 import { Route as DashboardNodesNodeIdDeleteImport } from './routes/_dashboard/nodes/$nodeId/delete'
 import { Route as DashboardHostsInboundIdCreateImport } from './routes/_dashboard/hosts/$inboundId/create'
@@ -48,6 +53,9 @@ const DashboardIndexLazyImport = createFileRoute('/_dashboard/')()
 const DashboardUsersLazyImport = createFileRoute('/_dashboard/users')()
 const DashboardSettingsLazyImport = createFileRoute('/_dashboard/settings')()
 const DashboardServicesLazyImport = createFileRoute('/_dashboard/services')()
+const DashboardProxyPoolsLazyImport = createFileRoute(
+  '/_dashboard/proxy-pools',
+)()
 const DashboardNodesLazyImport = createFileRoute('/_dashboard/nodes')()
 const DashboardHostsLazyImport = createFileRoute('/_dashboard/hosts')()
 const DashboardAdminsLazyImport = createFileRoute('/_dashboard/admins')()
@@ -94,6 +102,14 @@ const DashboardServicesLazyRoute = DashboardServicesLazyImport.update({
   getParentRoute: () => DashboardRoute,
 } as any).lazy(() =>
   import('./routes/_dashboard/services.lazy').then((d) => d.Route),
+)
+
+const DashboardProxyPoolsLazyRoute = DashboardProxyPoolsLazyImport.update({
+  id: '/proxy-pools',
+  path: '/proxy-pools',
+  getParentRoute: () => DashboardRoute,
+} as any).lazy(() =>
+  import('./routes/_dashboard/proxy-pools.lazy').then((d) => d.Route),
 )
 
 const DashboardNodesLazyRoute = DashboardNodesLazyImport.update({
@@ -151,6 +167,18 @@ const DashboardServicesServiceIdRoute = DashboardServicesServiceIdImport.update(
     getParentRoute: () => DashboardServicesLazyRoute,
   } as any,
 )
+
+const DashboardProxyPoolsCreateRoute = DashboardProxyPoolsCreateImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => DashboardProxyPoolsLazyRoute,
+} as any)
+
+const DashboardProxyPoolsPoolIdRoute = DashboardProxyPoolsPoolIdImport.update({
+  id: '/$poolId',
+  path: '/$poolId',
+  getParentRoute: () => DashboardProxyPoolsLazyRoute,
+} as any)
 
 const DashboardNodesCreateRoute = DashboardNodesCreateImport.update({
   id: '/create',
@@ -240,6 +268,27 @@ const DashboardServicesServiceIdDeleteRoute =
     id: '/delete',
     path: '/delete',
     getParentRoute: () => DashboardServicesServiceIdRoute,
+  } as any)
+
+const DashboardProxyPoolsPoolIdServersRoute =
+  DashboardProxyPoolsPoolIdServersImport.update({
+    id: '/servers',
+    path: '/servers',
+    getParentRoute: () => DashboardProxyPoolsPoolIdRoute,
+  } as any)
+
+const DashboardProxyPoolsPoolIdEditRoute =
+  DashboardProxyPoolsPoolIdEditImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => DashboardProxyPoolsPoolIdRoute,
+  } as any)
+
+const DashboardProxyPoolsPoolIdDeleteRoute =
+  DashboardProxyPoolsPoolIdDeleteImport.update({
+    id: '/delete',
+    path: '/delete',
+    getParentRoute: () => DashboardProxyPoolsPoolIdRoute,
   } as any)
 
 const DashboardNodesNodeIdEditRoute = DashboardNodesNodeIdEditImport.update({
@@ -338,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardNodesLazyImport
       parentRoute: typeof DashboardImport
     }
+    '/_dashboard/proxy-pools': {
+      id: '/_dashboard/proxy-pools'
+      path: '/proxy-pools'
+      fullPath: '/proxy-pools'
+      preLoaderRoute: typeof DashboardProxyPoolsLazyImport
+      parentRoute: typeof DashboardImport
+    }
     '/_dashboard/services': {
       id: '/_dashboard/services'
       path: '/services'
@@ -400,6 +456,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/nodes/create'
       preLoaderRoute: typeof DashboardNodesCreateImport
       parentRoute: typeof DashboardNodesLazyImport
+    }
+    '/_dashboard/proxy-pools/$poolId': {
+      id: '/_dashboard/proxy-pools/$poolId'
+      path: '/$poolId'
+      fullPath: '/proxy-pools/$poolId'
+      preLoaderRoute: typeof DashboardProxyPoolsPoolIdImport
+      parentRoute: typeof DashboardProxyPoolsLazyImport
+    }
+    '/_dashboard/proxy-pools/create': {
+      id: '/_dashboard/proxy-pools/create'
+      path: '/create'
+      fullPath: '/proxy-pools/create'
+      preLoaderRoute: typeof DashboardProxyPoolsCreateImport
+      parentRoute: typeof DashboardProxyPoolsLazyImport
     }
     '/_dashboard/services/$serviceId': {
       id: '/_dashboard/services/$serviceId'
@@ -477,6 +547,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/nodes/$nodeId/edit'
       preLoaderRoute: typeof DashboardNodesNodeIdEditImport
       parentRoute: typeof DashboardNodesNodeIdImport
+    }
+    '/_dashboard/proxy-pools/$poolId/delete': {
+      id: '/_dashboard/proxy-pools/$poolId/delete'
+      path: '/delete'
+      fullPath: '/proxy-pools/$poolId/delete'
+      preLoaderRoute: typeof DashboardProxyPoolsPoolIdDeleteImport
+      parentRoute: typeof DashboardProxyPoolsPoolIdImport
+    }
+    '/_dashboard/proxy-pools/$poolId/edit': {
+      id: '/_dashboard/proxy-pools/$poolId/edit'
+      path: '/edit'
+      fullPath: '/proxy-pools/$poolId/edit'
+      preLoaderRoute: typeof DashboardProxyPoolsPoolIdEditImport
+      parentRoute: typeof DashboardProxyPoolsPoolIdImport
+    }
+    '/_dashboard/proxy-pools/$poolId/servers': {
+      id: '/_dashboard/proxy-pools/$poolId/servers'
+      path: '/servers'
+      fullPath: '/proxy-pools/$poolId/servers'
+      preLoaderRoute: typeof DashboardProxyPoolsPoolIdServersImport
+      parentRoute: typeof DashboardProxyPoolsPoolIdImport
     }
     '/_dashboard/services/$serviceId/delete': {
       id: '/_dashboard/services/$serviceId/delete'
@@ -643,6 +734,41 @@ const DashboardNodesLazyRouteChildren: DashboardNodesLazyRouteChildren = {
 const DashboardNodesLazyRouteWithChildren =
   DashboardNodesLazyRoute._addFileChildren(DashboardNodesLazyRouteChildren)
 
+interface DashboardProxyPoolsPoolIdRouteChildren {
+  DashboardProxyPoolsPoolIdDeleteRoute: typeof DashboardProxyPoolsPoolIdDeleteRoute
+  DashboardProxyPoolsPoolIdEditRoute: typeof DashboardProxyPoolsPoolIdEditRoute
+  DashboardProxyPoolsPoolIdServersRoute: typeof DashboardProxyPoolsPoolIdServersRoute
+}
+
+const DashboardProxyPoolsPoolIdRouteChildren: DashboardProxyPoolsPoolIdRouteChildren =
+  {
+    DashboardProxyPoolsPoolIdDeleteRoute: DashboardProxyPoolsPoolIdDeleteRoute,
+    DashboardProxyPoolsPoolIdEditRoute: DashboardProxyPoolsPoolIdEditRoute,
+    DashboardProxyPoolsPoolIdServersRoute:
+      DashboardProxyPoolsPoolIdServersRoute,
+  }
+
+const DashboardProxyPoolsPoolIdRouteWithChildren =
+  DashboardProxyPoolsPoolIdRoute._addFileChildren(
+    DashboardProxyPoolsPoolIdRouteChildren,
+  )
+
+interface DashboardProxyPoolsLazyRouteChildren {
+  DashboardProxyPoolsPoolIdRoute: typeof DashboardProxyPoolsPoolIdRouteWithChildren
+  DashboardProxyPoolsCreateRoute: typeof DashboardProxyPoolsCreateRoute
+}
+
+const DashboardProxyPoolsLazyRouteChildren: DashboardProxyPoolsLazyRouteChildren =
+  {
+    DashboardProxyPoolsPoolIdRoute: DashboardProxyPoolsPoolIdRouteWithChildren,
+    DashboardProxyPoolsCreateRoute: DashboardProxyPoolsCreateRoute,
+  }
+
+const DashboardProxyPoolsLazyRouteWithChildren =
+  DashboardProxyPoolsLazyRoute._addFileChildren(
+    DashboardProxyPoolsLazyRouteChildren,
+  )
+
 interface DashboardServicesServiceIdRouteChildren {
   DashboardServicesServiceIdDeleteRoute: typeof DashboardServicesServiceIdDeleteRoute
   DashboardServicesServiceIdEditRoute: typeof DashboardServicesServiceIdEditRoute
@@ -709,6 +835,7 @@ interface DashboardRouteChildren {
   DashboardAdminsLazyRoute: typeof DashboardAdminsLazyRouteWithChildren
   DashboardHostsLazyRoute: typeof DashboardHostsLazyRouteWithChildren
   DashboardNodesLazyRoute: typeof DashboardNodesLazyRouteWithChildren
+  DashboardProxyPoolsLazyRoute: typeof DashboardProxyPoolsLazyRouteWithChildren
   DashboardServicesLazyRoute: typeof DashboardServicesLazyRouteWithChildren
   DashboardSettingsLazyRoute: typeof DashboardSettingsLazyRoute
   DashboardUsersLazyRoute: typeof DashboardUsersLazyRouteWithChildren
@@ -719,6 +846,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminsLazyRoute: DashboardAdminsLazyRouteWithChildren,
   DashboardHostsLazyRoute: DashboardHostsLazyRouteWithChildren,
   DashboardNodesLazyRoute: DashboardNodesLazyRouteWithChildren,
+  DashboardProxyPoolsLazyRoute: DashboardProxyPoolsLazyRouteWithChildren,
   DashboardServicesLazyRoute: DashboardServicesLazyRouteWithChildren,
   DashboardSettingsLazyRoute: DashboardSettingsLazyRoute,
   DashboardUsersLazyRoute: DashboardUsersLazyRouteWithChildren,
@@ -735,6 +863,7 @@ export interface FileRoutesByFullPath {
   '/admins': typeof DashboardAdminsLazyRouteWithChildren
   '/hosts': typeof DashboardHostsLazyRouteWithChildren
   '/nodes': typeof DashboardNodesLazyRouteWithChildren
+  '/proxy-pools': typeof DashboardProxyPoolsLazyRouteWithChildren
   '/services': typeof DashboardServicesLazyRouteWithChildren
   '/settings': typeof DashboardSettingsLazyRoute
   '/users': typeof DashboardUsersLazyRouteWithChildren
@@ -744,6 +873,8 @@ export interface FileRoutesByFullPath {
   '/hosts/$hostId': typeof DashboardHostsHostIdRouteWithChildren
   '/nodes/$nodeId': typeof DashboardNodesNodeIdRouteWithChildren
   '/nodes/create': typeof DashboardNodesCreateRoute
+  '/proxy-pools/$poolId': typeof DashboardProxyPoolsPoolIdRouteWithChildren
+  '/proxy-pools/create': typeof DashboardProxyPoolsCreateRoute
   '/services/$serviceId': typeof DashboardServicesServiceIdRouteWithChildren
   '/services/create': typeof DashboardServicesCreateRoute
   '/users/$userId': typeof DashboardUsersUserIdRouteWithChildren
@@ -755,6 +886,9 @@ export interface FileRoutesByFullPath {
   '/hosts/$inboundId/create': typeof DashboardHostsInboundIdCreateRoute
   '/nodes/$nodeId/delete': typeof DashboardNodesNodeIdDeleteRoute
   '/nodes/$nodeId/edit': typeof DashboardNodesNodeIdEditRoute
+  '/proxy-pools/$poolId/delete': typeof DashboardProxyPoolsPoolIdDeleteRoute
+  '/proxy-pools/$poolId/edit': typeof DashboardProxyPoolsPoolIdEditRoute
+  '/proxy-pools/$poolId/servers': typeof DashboardProxyPoolsPoolIdServersRoute
   '/services/$serviceId/delete': typeof DashboardServicesServiceIdDeleteRoute
   '/services/$serviceId/edit': typeof DashboardServicesServiceIdEditRoute
   '/users/$userId/delete': typeof DashboardUsersUserIdDeleteRoute
@@ -772,12 +906,15 @@ export interface FileRoutesByTo {
   '/admins': typeof DashboardAdminsLazyRouteWithChildren
   '/hosts': typeof DashboardHostsLazyRouteWithChildren
   '/nodes': typeof DashboardNodesLazyRouteWithChildren
+  '/proxy-pools': typeof DashboardProxyPoolsLazyRouteWithChildren
   '/services': typeof DashboardServicesLazyRouteWithChildren
   '/settings': typeof DashboardSettingsLazyRoute
   '/users': typeof DashboardUsersLazyRouteWithChildren
   '/': typeof DashboardIndexLazyRoute
   '/admins/create': typeof DashboardAdminsCreateRoute
   '/nodes/create': typeof DashboardNodesCreateRoute
+  '/proxy-pools/$poolId': typeof DashboardProxyPoolsPoolIdRouteWithChildren
+  '/proxy-pools/create': typeof DashboardProxyPoolsCreateRoute
   '/services/create': typeof DashboardServicesCreateRoute
   '/users/create': typeof DashboardUsersCreateRoute
   '/admins/$adminId/delete': typeof DashboardAdminsAdminIdDeleteRoute
@@ -787,6 +924,9 @@ export interface FileRoutesByTo {
   '/hosts/$inboundId/create': typeof DashboardHostsInboundIdCreateRoute
   '/nodes/$nodeId/delete': typeof DashboardNodesNodeIdDeleteRoute
   '/nodes/$nodeId/edit': typeof DashboardNodesNodeIdEditRoute
+  '/proxy-pools/$poolId/delete': typeof DashboardProxyPoolsPoolIdDeleteRoute
+  '/proxy-pools/$poolId/edit': typeof DashboardProxyPoolsPoolIdEditRoute
+  '/proxy-pools/$poolId/servers': typeof DashboardProxyPoolsPoolIdServersRoute
   '/services/$serviceId/delete': typeof DashboardServicesServiceIdDeleteRoute
   '/services/$serviceId/edit': typeof DashboardServicesServiceIdEditRoute
   '/users/$userId/delete': typeof DashboardUsersUserIdDeleteRoute
@@ -806,6 +946,7 @@ export interface FileRoutesById {
   '/_dashboard/admins': typeof DashboardAdminsLazyRouteWithChildren
   '/_dashboard/hosts': typeof DashboardHostsLazyRouteWithChildren
   '/_dashboard/nodes': typeof DashboardNodesLazyRouteWithChildren
+  '/_dashboard/proxy-pools': typeof DashboardProxyPoolsLazyRouteWithChildren
   '/_dashboard/services': typeof DashboardServicesLazyRouteWithChildren
   '/_dashboard/settings': typeof DashboardSettingsLazyRoute
   '/_dashboard/users': typeof DashboardUsersLazyRouteWithChildren
@@ -815,6 +956,8 @@ export interface FileRoutesById {
   '/_dashboard/hosts/$hostId': typeof DashboardHostsHostIdRouteWithChildren
   '/_dashboard/nodes/$nodeId': typeof DashboardNodesNodeIdRouteWithChildren
   '/_dashboard/nodes/create': typeof DashboardNodesCreateRoute
+  '/_dashboard/proxy-pools/$poolId': typeof DashboardProxyPoolsPoolIdRouteWithChildren
+  '/_dashboard/proxy-pools/create': typeof DashboardProxyPoolsCreateRoute
   '/_dashboard/services/$serviceId': typeof DashboardServicesServiceIdRouteWithChildren
   '/_dashboard/services/create': typeof DashboardServicesCreateRoute
   '/_dashboard/users/$userId': typeof DashboardUsersUserIdRouteWithChildren
@@ -826,6 +969,9 @@ export interface FileRoutesById {
   '/_dashboard/hosts/$inboundId/create': typeof DashboardHostsInboundIdCreateRoute
   '/_dashboard/nodes/$nodeId/delete': typeof DashboardNodesNodeIdDeleteRoute
   '/_dashboard/nodes/$nodeId/edit': typeof DashboardNodesNodeIdEditRoute
+  '/_dashboard/proxy-pools/$poolId/delete': typeof DashboardProxyPoolsPoolIdDeleteRoute
+  '/_dashboard/proxy-pools/$poolId/edit': typeof DashboardProxyPoolsPoolIdEditRoute
+  '/_dashboard/proxy-pools/$poolId/servers': typeof DashboardProxyPoolsPoolIdServersRoute
   '/_dashboard/services/$serviceId/delete': typeof DashboardServicesServiceIdDeleteRoute
   '/_dashboard/services/$serviceId/edit': typeof DashboardServicesServiceIdEditRoute
   '/_dashboard/users/$userId/delete': typeof DashboardUsersUserIdDeleteRoute
@@ -845,6 +991,7 @@ export interface FileRouteTypes {
     | '/admins'
     | '/hosts'
     | '/nodes'
+    | '/proxy-pools'
     | '/services'
     | '/settings'
     | '/users'
@@ -854,6 +1001,8 @@ export interface FileRouteTypes {
     | '/hosts/$hostId'
     | '/nodes/$nodeId'
     | '/nodes/create'
+    | '/proxy-pools/$poolId'
+    | '/proxy-pools/create'
     | '/services/$serviceId'
     | '/services/create'
     | '/users/$userId'
@@ -865,6 +1014,9 @@ export interface FileRouteTypes {
     | '/hosts/$inboundId/create'
     | '/nodes/$nodeId/delete'
     | '/nodes/$nodeId/edit'
+    | '/proxy-pools/$poolId/delete'
+    | '/proxy-pools/$poolId/edit'
+    | '/proxy-pools/$poolId/servers'
     | '/services/$serviceId/delete'
     | '/services/$serviceId/edit'
     | '/users/$userId/delete'
@@ -881,12 +1033,15 @@ export interface FileRouteTypes {
     | '/admins'
     | '/hosts'
     | '/nodes'
+    | '/proxy-pools'
     | '/services'
     | '/settings'
     | '/users'
     | '/'
     | '/admins/create'
     | '/nodes/create'
+    | '/proxy-pools/$poolId'
+    | '/proxy-pools/create'
     | '/services/create'
     | '/users/create'
     | '/admins/$adminId/delete'
@@ -896,6 +1051,9 @@ export interface FileRouteTypes {
     | '/hosts/$inboundId/create'
     | '/nodes/$nodeId/delete'
     | '/nodes/$nodeId/edit'
+    | '/proxy-pools/$poolId/delete'
+    | '/proxy-pools/$poolId/edit'
+    | '/proxy-pools/$poolId/servers'
     | '/services/$serviceId/delete'
     | '/services/$serviceId/edit'
     | '/users/$userId/delete'
@@ -913,6 +1071,7 @@ export interface FileRouteTypes {
     | '/_dashboard/admins'
     | '/_dashboard/hosts'
     | '/_dashboard/nodes'
+    | '/_dashboard/proxy-pools'
     | '/_dashboard/services'
     | '/_dashboard/settings'
     | '/_dashboard/users'
@@ -922,6 +1081,8 @@ export interface FileRouteTypes {
     | '/_dashboard/hosts/$hostId'
     | '/_dashboard/nodes/$nodeId'
     | '/_dashboard/nodes/create'
+    | '/_dashboard/proxy-pools/$poolId'
+    | '/_dashboard/proxy-pools/create'
     | '/_dashboard/services/$serviceId'
     | '/_dashboard/services/create'
     | '/_dashboard/users/$userId'
@@ -933,6 +1094,9 @@ export interface FileRouteTypes {
     | '/_dashboard/hosts/$inboundId/create'
     | '/_dashboard/nodes/$nodeId/delete'
     | '/_dashboard/nodes/$nodeId/edit'
+    | '/_dashboard/proxy-pools/$poolId/delete'
+    | '/_dashboard/proxy-pools/$poolId/edit'
+    | '/_dashboard/proxy-pools/$poolId/servers'
     | '/_dashboard/services/$serviceId/delete'
     | '/_dashboard/services/$serviceId/edit'
     | '/_dashboard/users/$userId/delete'
@@ -981,6 +1145,7 @@ export const routeTree = rootRoute
         "/_dashboard/admins",
         "/_dashboard/hosts",
         "/_dashboard/nodes",
+        "/_dashboard/proxy-pools",
         "/_dashboard/services",
         "/_dashboard/settings",
         "/_dashboard/users",
@@ -1013,6 +1178,14 @@ export const routeTree = rootRoute
       "children": [
         "/_dashboard/nodes/$nodeId",
         "/_dashboard/nodes/create"
+      ]
+    },
+    "/_dashboard/proxy-pools": {
+      "filePath": "_dashboard/proxy-pools.lazy.tsx",
+      "parent": "/_dashboard",
+      "children": [
+        "/_dashboard/proxy-pools/$poolId",
+        "/_dashboard/proxy-pools/create"
       ]
     },
     "/_dashboard/services": {
@@ -1074,6 +1247,19 @@ export const routeTree = rootRoute
       "filePath": "_dashboard/nodes/create.tsx",
       "parent": "/_dashboard/nodes"
     },
+    "/_dashboard/proxy-pools/$poolId": {
+      "filePath": "_dashboard/proxy-pools/$poolId.tsx",
+      "parent": "/_dashboard/proxy-pools",
+      "children": [
+        "/_dashboard/proxy-pools/$poolId/delete",
+        "/_dashboard/proxy-pools/$poolId/edit",
+        "/_dashboard/proxy-pools/$poolId/servers"
+      ]
+    },
+    "/_dashboard/proxy-pools/create": {
+      "filePath": "_dashboard/proxy-pools/create.tsx",
+      "parent": "/_dashboard/proxy-pools"
+    },
     "/_dashboard/services/$serviceId": {
       "filePath": "_dashboard/services/$serviceId.tsx",
       "parent": "/_dashboard/services",
@@ -1127,6 +1313,18 @@ export const routeTree = rootRoute
     "/_dashboard/nodes/$nodeId/edit": {
       "filePath": "_dashboard/nodes/$nodeId/edit.tsx",
       "parent": "/_dashboard/nodes/$nodeId"
+    },
+    "/_dashboard/proxy-pools/$poolId/delete": {
+      "filePath": "_dashboard/proxy-pools/$poolId/delete.tsx",
+      "parent": "/_dashboard/proxy-pools/$poolId"
+    },
+    "/_dashboard/proxy-pools/$poolId/edit": {
+      "filePath": "_dashboard/proxy-pools/$poolId/edit.tsx",
+      "parent": "/_dashboard/proxy-pools/$poolId"
+    },
+    "/_dashboard/proxy-pools/$poolId/servers": {
+      "filePath": "_dashboard/proxy-pools/$poolId/servers.tsx",
+      "parent": "/_dashboard/proxy-pools/$poolId"
     },
     "/_dashboard/services/$serviceId/delete": {
       "filePath": "_dashboard/services/$serviceId/delete.tsx",

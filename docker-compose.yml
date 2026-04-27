@@ -1,6 +1,6 @@
 services:
   marzneshin:
-    image: dimasavr/marzneshin-aggregator:latest
+    image: dimasavr/marzneshin-aggregator:v1.0
     restart: always
     env_file: .env
     network_mode: host

@@ -139,16 +139,18 @@ install_marzneshin() {
         colorized_echo blue "Using local files"
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         
-        if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
-            cp "$SCRIPT_DIR/docker-compose.yml" "$CONFIG_DIR/docker-compose.yml"
-            colorized_echo green "Local compose file copied"
+        if [ -f "$SCRIPT_DIR/Dockerfile" ]; then
+            colorized_echo blue "Copying project files to $CONFIG_DIR"
+            cp -r "$SCRIPT_DIR"/* "$CONFIG_DIR/"
+            cp -r "$SCRIPT_DIR"/.* "$CONFIG_DIR/" 2>/dev/null || true
+            colorized_echo green "Local project files copied"
         else
-            colorized_echo red "Local docker-compose.yml not found in $SCRIPT_DIR"
+            colorized_echo red "Local project files not found in $SCRIPT_DIR"
             exit 1
         fi
         
-        if [ -f "$SCRIPT_DIR/.env.example" ]; then
-            cp "$SCRIPT_DIR/.env.example" "$CONFIG_DIR/.env"
+        if [ -f "$CONFIG_DIR/.env.example" ]; then
+            cp "$CONFIG_DIR/.env.example" "$CONFIG_DIR/.env"
             colorized_echo green "Local .env file copied"
         else
             colorized_echo red "Local .env.example not found"

@@ -88,9 +88,41 @@ def generate_subscription_template(
         shuffle=subscription_settings.shuffle_configs,
         admin_id=db_user.admin_id,
     ).split()
+
+    direct_links = []
+    bridge_links = []
+    external_links = []
+
+    for link in links:
+        if link.startswith("vless://") or link.startswith("vmess://") or link.startswith("trojan://"):
+            if "#" in link:
+                remark = link.split("#")[-1]
+                try:
+                    remark = remark.replace("%20", " ").replace("+", " ")
+                    import urllib.parse
+                    remark = urllib.parse.unquote(remark)
+                except Exception:
+                    pass
+            else:
+                remark = ""
+
+            if "🌉" in remark or "[Bridge]" in remark:
+                bridge_links.append(link)
+            elif "🔗" in remark or "[External]" in remark:
+                external_links.append(link)
+            else:
+                direct_links.append(link)
+        else:
+            direct_links.append(link)
+
     return render_template(
         SUBSCRIPTION_PAGE_TEMPLATE,
-        {"user": UserResponse.model_validate(db_user), "links": links},
+        {
+            "user": UserResponse.model_validate(db_user),
+            "direct_links": direct_links,
+            "bridge_links": bridge_links,
+            "external_links": external_links,
+        },
     )
 
 

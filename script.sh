@@ -129,22 +129,44 @@ install_marzneshin() {
     FILES_URL_PREFIX="https://raw.githubusercontent.com/marzneshin/marzneshin/master"
 	COMPOSE_FILES_URL="https://raw.githubusercontent.com/marzneshin/marzneshin-deploy/master"
  	database=$1
-  	nightly=$2
+   	nightly=$2
+   	local_install=$3
   
     mkdir -p "$DATA_DIR"
     mkdir -p "$CONFIG_DIR"
 
-    colorized_echo blue "Fetching compose file"
-    curl -sL "$COMPOSE_FILES_URL/docker-compose-$database.yml" -o "$CONFIG_DIR/docker-compose.yml"
-    colorized_echo green "File saved in $CONFIG_DIR/docker-compose.yml"
-	if [ "$nightly" = true ]; then
-	    colorized_echo red "setting compose tag to nightly."
-	 	sed -ri "s/(dawsh\/marzneshin:)latest/\1nightly/g" $CONFIG_DIR/docker-compose.yml
-	fi
- 
-    colorized_echo blue "Fetching example .env file"
-    curl -sL "$FILES_URL_PREFIX/.env.example" -o "$CONFIG_DIR/.env"
-    colorized_echo green "File saved in $CONFIG_DIR/.env"
+    if [ "$local_install" = true ]; then
+        colorized_echo blue "Using local files"
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        
+        if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
+            cp "$SCRIPT_DIR/docker-compose.yml" "$CONFIG_DIR/docker-compose.yml"
+            colorized_echo green "Local compose file copied"
+        else
+            colorized_echo red "Local docker-compose.yml not found in $SCRIPT_DIR"
+            exit 1
+        fi
+        
+        if [ -f "$SCRIPT_DIR/.env.example" ]; then
+            cp "$SCRIPT_DIR/.env.example" "$CONFIG_DIR/.env"
+            colorized_echo green "Local .env file copied"
+        else
+            colorized_echo red "Local .env.example not found"
+            exit 1
+        fi
+    else
+        colorized_echo blue "Fetching compose file"
+        curl -sL "$COMPOSE_FILES_URL/docker-compose-$database.yml" -o "$CONFIG_DIR/docker-compose.yml"
+        colorized_echo green "File saved in $CONFIG_DIR/docker-compose.yml"
+    	if [ "$nightly" = true ]; then
+    	    colorized_echo red "setting compose tag to nightly."
+    	 	sed -ri "s/(dawsh\/marzneshin:)latest/\1nightly/g" $CONFIG_DIR/docker-compose.yml
+    	fi
+     
+        colorized_echo blue "Fetching example .env file"
+        curl -sL "$FILES_URL_PREFIX/.env.example" -o "$CONFIG_DIR/.env"
+        colorized_echo green "File saved in $CONFIG_DIR/.env"
+    fi
 
     colorized_echo green "Marzneshin files downloaded successfully"
 }
@@ -266,8 +288,9 @@ install_command() {
         install_docker
     fi
 	
-    database="sqlite"
+	database="sqlite"
 	nightly=false
+	local_install=false
  
 	while [[ "$#" -gt 0 ]]; do
 	    case $1 in
@@ -282,6 +305,9 @@ install_command() {
 			-n|--nightly)
 	            nightly=true
 	            ;;
+			-l|--local)
+				local_install=true
+				;;
 	        *)
 	            echo "Unknown option: $1"
 	            exit 1
@@ -291,8 +317,10 @@ install_command() {
 	done
 
     detect_compose
-    install_marzneshin_script
-    install_marzneshin $database $nightly
+    if [ "$local_install" = false ]; then
+        install_marzneshin_script
+    fi
+    install_marzneshin $database $nightly $local_install
     install_marznode_xray_config
     up_marzneshin
     follow_marzneshin_logs
@@ -572,6 +600,10 @@ usage() {
     echo "  logs            Show logs"
     echo "  cli             Marzneshin command-line interface"
     echo "  install         Install Marzneshin"
+    echo "    Options:"
+    echo "      -d, --database [sqlite|mysql|mariadb]  Database type (default: sqlite)"
+    echo "      -n, --nightly                          Use nightly builds"
+    echo "      -l, --local                            Use local source files (build from current directory)"
     echo "  update          Update latest version"
     echo "  uninstall       Uninstall Marzneshin"
     echo "  install-script  Install Marzneshin script"

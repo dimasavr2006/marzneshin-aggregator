@@ -21,6 +21,7 @@ export const HostSchema = z.object({
                 z.null(),
             ])
         ),
+    chain_ids: z.array(z.number()).default([]),
 });
 
 

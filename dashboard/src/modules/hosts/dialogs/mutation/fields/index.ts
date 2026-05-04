@@ -17,3 +17,4 @@ export * from "./early-data";
 export * from "./noise";
 export * from "./http-headers-dynamic-fields";
 export * from "./mux-settings";
+export * from "./chain-hosts";

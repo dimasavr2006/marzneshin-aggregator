@@ -9,4 +9,5 @@ export const tuicProfileDefaultValue: TuicSchemaType = {
     alpn: '',
     allowinsecure: false,
     is_disabled: false,
+    chain_ids: [],
 };

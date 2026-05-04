@@ -17,4 +17,5 @@ export const generalProfileDefaultValue: GeneralSchemaType = {
     allowinsecure: false,
     fingerprint: "none",
     is_disabled: false,
+    chain_ids: [],
 };

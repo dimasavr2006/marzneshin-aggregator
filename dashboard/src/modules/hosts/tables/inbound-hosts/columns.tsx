@@ -26,6 +26,14 @@ export const columns = (actions: ColumnActions<HostType>): ColumnDef<HostType>[]
         header: ({ column }) => <DataTableColumnHeader title={i18n.t('port')} column={column} />,
     },
     {
+        accessorKey: "chain_ids",
+        header: ({ column }) => <DataTableColumnHeader title={i18n.t('page.hosts.chain_hosts')} column={column} />,
+        cell: ({ row }) => {
+            const chainIds = row.getValue("chain_ids") as number[];
+            return <span>{chainIds?.length || 0}</span>;
+        },
+    },
+    {
         id: "actions",
         cell: ({ row }) => {
             return (

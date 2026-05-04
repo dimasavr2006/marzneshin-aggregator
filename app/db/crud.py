@@ -171,32 +171,38 @@ def get_hosts_for_user(session, user_id):
     user = session.query(User).filter(User.id == user_id).one()
 
     # Query for hosts linked through user's services and inbounds
-    result_query = session.query(InboundHost).filter(
-        and_(
-            # Exclude disabled hosts
-            InboundHost.is_disabled.is_(False),
-            or_(
-                # Case 1: Host has an inbound linked to a service of the user
-                InboundHost.inbound.has(
-                    Inbound.services.any(
-                        Service.id.in_([s.id for s in user.services])
-                    )
-                ),
-                # Case 2: Host has no inbound
-                and_(
-                    InboundHost.inbound_id.is_(
-                        None
-                    ),  # Host does not have an inbound
-                    or_(
-                        # Host is directly related to a service of the user
-                        InboundHost.services.any(
+    result_query = (
+        session.query(InboundHost)
+        .options(
+            joinedload(InboundHost.chain).joinedload(HostChain.chained_host)
+        )
+        .filter(
+            and_(
+                # Exclude disabled hosts
+                InboundHost.is_disabled.is_(False),
+                or_(
+                    # Case 1: Host has an inbound linked to a service of the user
+                    InboundHost.inbound.has(
+                        Inbound.services.any(
                             Service.id.in_([s.id for s in user.services])
+                        )
+                    ),
+                    # Case 2: Host has no inbound
+                    and_(
+                        InboundHost.inbound_id.is_(
+                            None
+                        ),  # Host does not have an inbound
+                        or_(
+                            # Host is directly related to a service of the user
+                            InboundHost.services.any(
+                                Service.id.in_([s.id for s in user.services])
+                            ),
+                            # Host is available to all
+                            InboundHost.universal.is_(True),
                         ),
-                        # Host is available to all
-                        InboundHost.universal.is_(True),
                     ),
                 ),
-            ),
+            )
         )
     )
 

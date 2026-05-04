@@ -9,4 +9,5 @@ export const hysteria2ProfileDefaultValue: Hysteria2SchemaType = {
     alpn: "",
     allowinsecure: false,
     is_disabled: false,
+    chain_ids: [],
 };

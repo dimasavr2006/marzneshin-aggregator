@@ -8,4 +8,5 @@ export const wireguardProfileDefaultValue: WireguardSchemaType = {
     dns_servers: '',
     is_disabled: false,
     mtu: undefined,
+    chain_ids: [],
 };

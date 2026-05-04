@@ -345,6 +345,8 @@
         "interval-error": "Interval can not exceed 32 char and must be number-number",
         "packets-error": "Packets can not exceed 32 char and must be number-number or be tlshello"
       },
+      "chain_hosts": "Chain Hosts",
+      "no_hosts_available": "No hosts available for chaining",
       "popover-guide": {
         "title": "Using this setting, you are able to assign specific address for each inbound.",
         "desc": "Use these variables to make it dynamic",

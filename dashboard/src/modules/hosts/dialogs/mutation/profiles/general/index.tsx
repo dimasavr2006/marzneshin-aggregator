@@ -1,4 +1,5 @@
 import {
+    ChainHostsField,
     CommonFields,
     EarlyDataField,
     FragmentField,
@@ -22,6 +23,7 @@ export const GeneralProfileFields = () => {
     return (
         <div className="space-y-2">
             <CommonFields />
+            <ChainHostsField />
             <Accordion className="space-y-2" type="single" collapsible>
                 <SettingSection
                     value="network"

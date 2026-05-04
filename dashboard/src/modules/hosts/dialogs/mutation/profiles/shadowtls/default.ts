@@ -8,4 +8,5 @@ export const shadowTlsProfileDefaultValue: ShadowTlsSchemaType = {
     alpn: "",
     allowinsecure: false,
     is_disabled: false,
+    chain_ids: [],
 };

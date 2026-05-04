@@ -47,7 +47,14 @@
   "reached": "Достигнуто",
   "inactive": "Неактивно",
   "active": "Активно",
+  "all": "Все",
   "disable": "Отключить",
+  "category.bridge": "Бридж",
+  "category.external": "Внешний",
+  "routing_mode": "Режим маршрутизации",
+  "routing_mode.direct": "Прямой",
+  "routing_mode.via_node": "Через ноду",
+  "routing_mode.both": "Оба",
   "close": "Закрыть",
   "save": "Сохранить",
   "days": "Дни",
@@ -116,6 +123,21 @@
 	"copy": "Копировать сертификат",
 	"error": "Сертификат недоступен",
 	"copied": "Сертификат скопирован"
+      }
+    },
+    "proxy-pools": {
+      "routing_mode": "Режим маршрутизации",
+      "last_sync": "Последняя синхронизация",
+      "fields": {
+	"url": "URL"
+      },
+      "dialogs": {
+	"creation": {
+	  "title": "Создать пул прокси"
+	},
+	"edition": {
+	  "title": "Редактировать пул прокси"
+	}
       }
     },
     "login": {

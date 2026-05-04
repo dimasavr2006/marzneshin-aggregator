@@ -13,6 +13,8 @@ export async function fetchPools({
     const pagination = queryKey[1];
     const primaryFilter = queryKey[2];
     const filters = queryKey[4].filters;
+    const entityKey = queryKey[0] as string;
+    const category = entityKey.startsWith("proxy-pools-") ? entityKey.replace("proxy-pools-", "") : undefined;
     return fetch('/proxy-pool/subscriptions', {
         query: {
             ...pagination,
@@ -20,6 +22,7 @@ export async function fetchPools({
             name: primaryFilter,
             descending: queryKey[3].desc,
             order_by: queryKey[3].sortBy,
+            ...(category ? { category } : {}),
         }
     }).then((result) => {
         return {

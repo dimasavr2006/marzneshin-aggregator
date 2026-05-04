@@ -1,11 +1,19 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EntityTable } from "@marzneshin/libs/entity-table";
 import { fetchPools, Pool } from "@marzneshin/modules/proxy-pool";
+import { Tabs, TabsList, TabsTrigger } from "@marzneshin/common/components";
+import { useTranslation } from "react-i18next";
 import { columns } from "./columns";
+
+type CategoryFilter = "all" | "bridge" | "external";
 
 export const PoolsTable: FC = () => {
     const navigate = useNavigate({ from: "/proxy-pools" });
+    const { t } = useTranslation();
+    const [category, setCategory] = useState<CategoryFilter>("all");
+
+    const entityKey = category === "all" ? "proxy-pools" : `proxy-pools-${category}`;
 
     const onOpen = (entity: Pool) => navigate({ 
         to: "/proxy-pools/$poolId", 
@@ -25,13 +33,22 @@ export const PoolsTable: FC = () => {
     const columnsDef = columns({ onEdit, onDelete, onOpen });
 
     return (
-        <EntityTable
-            fetchEntity={fetchPools}
-            columns={columnsDef}
-            primaryFilter="name"
-            entityKey="proxy-pools"
-            onCreate={() => navigate({ to: "/proxy-pools/create" })}
-            onOpen={onOpen}
-        />
+        <div className="flex flex-col gap-4 w-full">
+            <Tabs value={category} onValueChange={(v) => setCategory(v as CategoryFilter)}>
+                <TabsList>
+                    <TabsTrigger value="all">{t("all")}</TabsTrigger>
+                    <TabsTrigger value="bridge">{t("category.bridge")}</TabsTrigger>
+                    <TabsTrigger value="external">{t("category.external")}</TabsTrigger>
+                </TabsList>
+            </Tabs>
+            <EntityTable
+                fetchEntity={fetchPools}
+                columns={columnsDef}
+                primaryFilter="name"
+                entityKey={entityKey}
+                onCreate={() => navigate({ to: "/proxy-pools/create" })}
+                onOpen={onOpen}
+            />
+        </div>
     );
 };

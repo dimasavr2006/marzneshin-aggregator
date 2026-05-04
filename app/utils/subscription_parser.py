@@ -4,7 +4,7 @@ from typing import Any
 
 import yaml
 
-from app.utils.vless_parser import parse_vless
+from app.utils.vless_parser import decode_json_escapes, parse_vless
 
 
 def parse_subscription(content: str) -> list[dict[str, Any]]:
@@ -36,7 +36,7 @@ def _parse_links(text: str) -> list[dict[str, Any]]:
     """Parse plain text containing one proxy URL per line."""
     servers = []
     for line in text.strip().splitlines():
-        line = line.strip()
+        line = decode_json_escapes(line.strip())
         if not line:
             continue
         if line.startswith("vless://"):
@@ -59,6 +59,7 @@ def _parse_links(text: str) -> list[dict[str, Any]]:
 
 def _parse_vmess(url: str) -> dict[str, Any]:
     """Parse a vmess:// URL (base64 JSON)."""
+    url = decode_json_escapes(url)
     if not url.startswith("vmess://"):
         raise ValueError("URL must start with vmess://")
 
@@ -87,6 +88,7 @@ def _parse_vmess(url: str) -> dict[str, Any]:
 
 def _parse_trojan(url: str) -> dict[str, Any]:
     """Parse a trojan:// URL."""
+    url = decode_json_escapes(url)
     if not url.startswith("trojan://"):
         raise ValueError("URL must start with trojan://")
 

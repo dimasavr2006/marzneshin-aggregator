@@ -2,8 +2,22 @@ import urllib.parse
 from typing import Any
 
 
+def decode_json_escapes(text: str) -> str:
+    """Decode common JSON unicode escapes that sometimes appear in URLs."""
+    return (
+        text.replace("\\u0026", "&")
+        .replace("\\u003D", "=")
+        .replace("\\u003F", "?")
+        .replace("\\u0023", "#")
+        .replace("\\u002F", "/")
+        .replace("\\u003A", ":")
+        .replace("\\u002B", "+")
+    )
+
+
 def parse_vless(url: str) -> dict[str, Any]:
     """Parse a vless:// URL and return a dict of proxy parameters."""
+    url = decode_json_escapes(url)
     if not url.startswith("vless://"):
         raise ValueError("URL must start with vless://")
 

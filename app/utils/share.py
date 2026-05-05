@@ -221,7 +221,13 @@ def generate_subscription(
             chaining_support=subscription_handler.chaining_support,
         )
         if admin_id:
-            configs.extend(get_proxy_pool_configs(admin_id, user_configs=configs))
+            configs.extend(
+                get_proxy_pool_configs(
+                    admin_id,
+                    user_configs=configs,
+                    chaining_support=subscription_handler.chaining_support,
+                )
+            )
 
     subscription_handler.add_proxies(configs)
     config = subscription_handler.render(sort=True, shuffle=shuffle)
@@ -379,8 +385,14 @@ def proxy_pool_server_to_v2data(srv: ProxyPoolServer, sub: ExternalSubscription 
 def get_proxy_pool_configs(
     user_admin_id: int | None,
     user_configs: list[V2Data] | None = None,
+    chaining_support: bool = False,
 ) -> list[V2Data]:
-    """Get proxy pool configs including bridge (direct + wrapped) and external VPN."""
+    """Get proxy pool configs including bridge (direct + wrapped) and external VPN.
+
+    Args:
+        chaining_support: If True, return wrapped configs with chain proxy (sing-box/xray).
+                         If False, return only standalone configs (links/clash).
+    """
     configs = []
     if user_admin_id is None:
         return configs
@@ -400,25 +412,26 @@ def get_proxy_pool_configs(
             for srv in servers:
                 bridge_servers.append((srv, sub))
 
-        # Add standalone bridge configs (direct mode)
-        for srv, sub in bridge_servers:
-            if sub.routing_mode in ("direct", "both"):
-                data = proxy_pool_server_to_v2data(srv, sub)
-                if data:
-                    configs.append(data)
-
-        # Wrap user configs with bridge (via_node mode)
-        if user_configs and bridge_servers:
+        if chaining_support:
+            # For sing-box/xray: only wrapped configs (chain proxy via detour/dialerProxy)
+            if user_configs and bridge_servers:
+                for srv, sub in bridge_servers:
+                    if sub.routing_mode in ("via_node", "both"):
+                        bridge_data = proxy_pool_server_to_v2data(srv, sub)
+                        if not bridge_data:
+                            continue
+                        for cfg in user_configs:
+                            wrapped = copy.deepcopy(cfg)
+                            wrapped.remark = f"🌉 [{sub.name}] {cfg.remark}"
+                            wrapped.next = bridge_data
+                            configs.append(wrapped)
+        else:
+            # For links/clash: only standalone bridge configs (as external VPN)
             for srv, sub in bridge_servers:
-                if sub.routing_mode in ("via_node", "both"):
-                    bridge_data = proxy_pool_server_to_v2data(srv, sub)
-                    if not bridge_data:
-                        continue
-                    for cfg in user_configs:
-                        wrapped = copy.deepcopy(cfg)
-                        wrapped.remark = f"🌉 [{sub.name}] {cfg.remark}"
-                        wrapped.next = bridge_data
-                        configs.append(wrapped)
+                if sub.routing_mode in ("direct", "both"):
+                    data = proxy_pool_server_to_v2data(srv, sub)
+                    if data:
+                        configs.append(data)
 
         # External VPN servers
         external_subs = get_external_subscriptions(
@@ -433,7 +446,7 @@ def get_proxy_pool_configs(
             for srv in servers:
                 data = proxy_pool_server_to_v2data(srv, sub)
                 if data:
-                    if sub.routing_mode == "via_node" and bridge_servers:
+                    if chaining_support and sub.routing_mode == "via_node" and bridge_servers:
                         # Wrap external through first available bridge
                         first_bridge = bridge_servers[0]
                         bridge_data = proxy_pool_server_to_v2data(

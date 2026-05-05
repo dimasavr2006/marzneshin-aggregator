@@ -106,9 +106,10 @@ def generate_subscription_template(
             else:
                 remark = ""
 
-            if "🌉" in remark or "[Bridge]" in remark:
-                bridge_links.append(link)
-            elif "🔗" in remark or "[External]" in remark:
+            if "🔗" in remark or "[External]" in remark:
+                external_links.append(link)
+            elif "🌉" in remark or "[Bridge]" in remark:
+                # Standalone bridge configs shown as external VPN
                 external_links.append(link)
             else:
                 direct_links.append(link)
@@ -120,7 +121,7 @@ def generate_subscription_template(
         {
             "user": UserResponse.model_validate(db_user),
             "direct_links": direct_links,
-            "bridge_links": bridge_links,
+            "bridge_links": [],
             "external_links": external_links,
         },
     )
@@ -158,9 +159,10 @@ def generate_subscription_html(
             else:
                 remark = ""
 
-            if "🌉" in remark or "[Bridge]" in remark:
-                bridge_links.append(link)
-            elif "🔗" in remark or "[External]" in remark:
+            if "🔗" in remark or "[External]" in remark:
+                external_links.append(link)
+            elif "🌉" in remark or "[Bridge]" in remark:
+                # Standalone bridge configs shown as external VPN
                 external_links.append(link)
             else:
                 direct_links.append(link)
@@ -172,7 +174,7 @@ def generate_subscription_html(
         {
             "user": UserResponse.model_validate(db_user),
             "direct_links": direct_links,
-            "bridge_links": bridge_links,
+            "bridge_links": [],
             "external_links": external_links,
         },
     )

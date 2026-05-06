@@ -536,6 +536,7 @@ class ExternalSubscription(Base):
     type = Column(String(32), nullable=False)
     category = Column(String(32), nullable=False)
     routing_mode = Column(String(32), default="both", server_default="both")
+    bridge_naming_template = Column(String(256), nullable=True)
     admin_id = Column(Integer, ForeignKey("admins.id"))
     admin = relationship("Admin", back_populates="external_subscriptions")
     is_active = Column(
@@ -589,4 +590,5 @@ class ProxyPoolServer(Base):
     )
 
     v2data_config = Column(JSON)
+    bridge_naming_override = Column(String(256), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

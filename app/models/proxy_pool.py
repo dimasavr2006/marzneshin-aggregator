@@ -10,6 +10,7 @@ class ExternalSubscriptionCreate(BaseModel):
     type: Literal["vless", "vmess", "trojan", "subscription"]
     category: Literal["bridge", "external"]
     routing_mode: Literal["direct", "via_node", "both"] = "both"
+    bridge_naming_template: str | None = None
     is_active: bool = True
 
 
@@ -19,6 +20,7 @@ class ExternalSubscriptionModify(BaseModel):
     type: Literal["vless", "vmess", "trojan", "subscription"] | None = None
     category: Literal["bridge", "external"] | None = None
     routing_mode: Literal["direct", "via_node", "both"] | None = None
+    bridge_naming_template: str | None = None
     is_active: bool | None = None
 
 
@@ -29,6 +31,7 @@ class ExternalSubscriptionResponse(BaseModel):
     type: str
     category: str
     routing_mode: str
+    bridge_naming_template: str | None
     admin_id: int | None
     is_active: bool
     last_sync_at: datetime | None
@@ -50,6 +53,7 @@ class ProxyPoolServerResponse(BaseModel):
     latency_ms: int | None
     last_tested_at: datetime | None
     is_available: bool
+    bridge_naming_override: str | None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

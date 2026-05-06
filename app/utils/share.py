@@ -446,13 +446,12 @@ def get_proxy_pool_configs(
                 bridge_servers.append((srv, sub))
 
         if chaining_support:
-            # For sing-box/xray: only wrapped configs (chain proxy via detour/dialerProxy)
+            # For sing-box/xray: wrapped configs through single bridge (first available)
             if user_configs and bridge_servers:
-                for srv, sub in bridge_servers:
-                    if sub.routing_mode in ("via_node", "both"):
-                        bridge_data = proxy_pool_server_to_v2data(srv, sub)
-                        if not bridge_data:
-                            continue
+                srv, sub = bridge_servers[0]
+                if sub.routing_mode in ("via_node", "both"):
+                    bridge_data = proxy_pool_server_to_v2data(srv, sub)
+                    if bridge_data:
                         for cfg in user_configs:
                             wrapped = copy.deepcopy(cfg)
                             bridge_copy = copy.deepcopy(bridge_data)

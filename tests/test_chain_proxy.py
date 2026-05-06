@@ -31,12 +31,14 @@ class TestProxyPoolServerToV2Data:
             pbk = "pubkey"
             sid = "sid123"
             flow = "xtls-rprx-vision"
+            bridge_naming_override = None
 
         srv = MockServer()
         data = proxy_pool_server_to_v2data(srv)
         assert data is not None
         assert data.protocol == "vless"
-        assert data.remark == "Test Server"
+        # When server has a name, fallback uses "Bridge (name)" format
+        assert data.remark == "Bridge (Test Server)"
         assert data.address == "example.com"
         assert data.port == 443
         assert str(data.uuid) == "550e8400-e29b-41d4-a716-446655440000"
@@ -71,12 +73,14 @@ class TestProxyPoolServerToV2Data:
             pbk = None
             sid = None
             flow = None
+            bridge_naming_override = None
 
         class MockSub:
             name = "Bridge Sub"
+            bridge_naming_template = None
 
         data = proxy_pool_server_to_v2data(MockServer(), MockSub())
-        assert data.remark == "🌉 Bridge Sub"
+        assert data.remark == "Bridge"
 
 
 class TestChainProxy:
@@ -182,11 +186,14 @@ class TestGetProxyPoolConfigs:
         sub.category = "bridge"
         sub.routing_mode = "both"
         sub.is_active = True
+        sub.bridge_naming_template = None
+        sub.preferred_bridge_server_id = None
         return sub
 
     @pytest.fixture
     def mock_bridge_server(self):
         srv = MagicMock()
+        srv.id = 1
         srv.protocol = "vless"
         srv.name = None
         srv.address = "bridge.example.com"
@@ -202,6 +209,7 @@ class TestGetProxyPoolConfigs:
         srv.pbk = "bpk"
         srv.sid = "bsid"
         srv.flow = "xtls-rprx-vision"
+        srv.bridge_naming_override = None
         return srv
 
     @pytest.fixture
@@ -216,10 +224,10 @@ class TestGetProxyPoolConfigs:
                    tls="reality", sni="node1.com", reality_pbk="pk", reality_sid="sid"),
         ]
 
-    def test_chaining_support_true_returns_wrapped_only(
+    def test_chaining_support_true_returns_wrapped_and_standalone(
         self, mock_bridge_sub, mock_bridge_server, user_configs
     ):
-        """When chaining_support=True, only wrapped configs should be returned."""
+        """When chaining_support=True, return wrapped + standalone bridge configs."""
         with patch("app.utils.share.GetDB") as mock_db_ctx, \
              patch("app.utils.share.get_external_subscriptions") as mock_get_subs, \
              patch("app.utils.share.get_proxy_pool_servers") as mock_get_servers:
@@ -241,19 +249,21 @@ class TestGetProxyPoolConfigs:
                 chaining_support=True,
             )
 
-            # Should have wrapped configs (2 user configs × 1 bridge)
-            assert len(result) == 2
+            # Should have 2 wrapped + 1 standalone = 3 configs
+            assert len(result) == 3
             remarks = [r.remark for r in result]
-            assert "🌉 [TestBridge] TCP Node" in remarks
-            assert "🌉 [TestBridge] XHTTP Node" in remarks
+            assert "TCP Node via TestBridge" in remarks
+            assert "XHTTP Node via TestBridge" in remarks
+            assert "Bridge" in remarks  # standalone
 
-            # All should have next (chain proxy)
-            assert all(r.next is not None for r in result)
+            # Wrapped should have next (chain proxy)
+            wrapped = [r for r in result if r.next is not None]
+            assert len(wrapped) == 2
 
-    def test_chaining_support_false_returns_standalone_only(
+    def test_chaining_support_false_returns_no_bridge(
         self, mock_bridge_sub, mock_bridge_server, user_configs
     ):
-        """When chaining_support=False, only standalone bridge configs should be returned."""
+        """When chaining_support=False, bridge configs are intentionally excluded."""
         with patch("app.utils.share.GetDB") as mock_db_ctx, \
              patch("app.utils.share.get_external_subscriptions") as mock_get_subs, \
              patch("app.utils.share.get_proxy_pool_servers") as mock_get_servers:
@@ -275,13 +285,11 @@ class TestGetProxyPoolConfigs:
                 chaining_support=False,
             )
 
-            # Should have standalone bridge config only
-            assert len(result) == 1
-            assert result[0].remark == "🌉 TestBridge"
-            assert result[0].next is None
+            # Should have no bridge configs (excluded from links/clash)
+            assert len(result) == 0
 
     def test_chaining_support_true_no_user_configs(self, mock_bridge_sub, mock_bridge_server):
-        """When chaining_support=True but no user_configs, return empty."""
+        """When chaining_support=True but no user_configs, return standalone bridges only."""
         with patch("app.utils.share.GetDB") as mock_db_ctx, \
              patch("app.utils.share.get_external_subscriptions") as mock_get_subs, \
              patch("app.utils.share.get_proxy_pool_servers") as mock_get_servers:
@@ -303,7 +311,9 @@ class TestGetProxyPoolConfigs:
                 chaining_support=True,
             )
 
-            assert len(result) == 0
+            # Should return 1 standalone bridge (no wrapped configs without user configs)
+            assert len(result) == 1
+            assert result[0].next is None
 
     def test_singbox_render_with_wrapped_configs(self, user_configs):
         """Sing-box config should properly render wrapped configs with detour."""
@@ -351,3 +361,81 @@ class TestGetProxyPoolConfigs:
         assert "🌉 [TestBridge] TCP Node" in decoded
         # The link does not contain chain proxy info
         assert "bridge.host" not in links[0]
+
+    def test_preferred_bridge_server_selection(self, user_configs):
+        """Test that preferred_bridge_server_id is respected."""
+        with patch("app.utils.share.GetDB") as mock_db_ctx, \
+             patch("app.utils.share.get_external_subscriptions") as mock_get_subs, \
+             patch("app.utils.share.get_proxy_pool_servers") as mock_get_servers:
+
+            mock_db = MagicMock()
+            mock_db_ctx.return_value.__enter__.return_value = mock_db
+
+            # Create two bridge servers
+            srv1 = MagicMock()
+            srv1.id = 1
+            srv1.protocol = "vless"
+            srv1.name = "Bridge1"
+            srv1.address = "b1.example.com"
+            srv1.port = 443
+            srv1.uuid = "550e8400-e29b-41d4-a716-446655440001"
+            srv1.password = None
+            srv1.network = "tcp"
+            srv1.tls = None
+            srv1.sni = None
+            srv1.host = None
+            srv1.path = None
+            srv1.fp = None
+            srv1.pbk = None
+            srv1.sid = None
+            srv1.flow = None
+            srv1.bridge_naming_override = None
+
+            srv2 = MagicMock()
+            srv2.id = 2
+            srv2.protocol = "vless"
+            srv2.name = "Bridge2"
+            srv2.address = "b2.example.com"
+            srv2.port = 443
+            srv2.uuid = "550e8400-e29b-41d4-a716-446655440002"
+            srv2.password = None
+            srv2.network = "tcp"
+            srv2.tls = None
+            srv2.sni = None
+            srv2.host = None
+            srv2.path = None
+            srv2.fp = None
+            srv2.pbk = None
+            srv2.sid = None
+            srv2.flow = None
+            srv2.bridge_naming_override = None
+
+            # Subscription prefers srv2
+            sub = MagicMock()
+            sub.id = 1
+            sub.name = "TestBridge"
+            sub.category = "bridge"
+            sub.routing_mode = "via_node"
+            sub.is_active = True
+            sub.preferred_bridge_server_id = 2
+            sub.bridge_naming_template = None
+
+            def side_effect(db, admin_id, category):
+                if category == "bridge":
+                    return [sub]
+                return []
+
+            mock_get_subs.side_effect = side_effect
+            mock_get_servers.return_value = [srv1, srv2]
+
+            result = get_proxy_pool_configs(
+                user_admin_id=1,
+                user_configs=user_configs,
+                chaining_support=True,
+            )
+
+            # Wrapped configs should use Bridge2 (preferred)
+            wrapped = [r for r in result if r.next is not None]
+            assert len(wrapped) == 2
+            for w in wrapped:
+                assert w.next.address == "b2.example.com"

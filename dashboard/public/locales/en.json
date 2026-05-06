@@ -105,6 +105,7 @@
     "proxy-pools": {
       "title": "Proxy Pool",
       "routing_mode": "Routing Mode",
+      "bridge_naming_template": "Bridge Naming Template",
       "last_sync": "Last Sync",
       "sync": {
         "action": "Sync",

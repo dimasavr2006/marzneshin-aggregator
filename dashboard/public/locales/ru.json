@@ -127,6 +127,7 @@
     },
     "proxy-pools": {
       "routing_mode": "Режим маршрутизации",
+      "bridge_naming_template": "Шаблон именования бриджа",
       "last_sync": "Последняя синхронизация",
       "fields": {
 	"url": "URL"

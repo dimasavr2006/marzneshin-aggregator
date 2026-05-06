@@ -43,6 +43,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
         type: "vless" as const,
         category: "bridge" as const,
         routing_mode: "both" as const,
+        bridge_naming_template: null as string | null,
         is_active: true,
     }), []);
 
@@ -180,6 +181,19 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 )}
                             />
                         </HStack>
+                        <FormField
+                            control={form.control}
+                            name="bridge_naming_template"
+                            render={({ field }) => (
+                                <FormItem className="w-full">
+                                    <FormLabel>{t("page.proxy-pools.bridge_naming_template")}</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} value={field.value || ""} placeholder="Bridge ({server_name})" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <Button
                             className="mt-3 w-full font-semibold"
                             type="submit"

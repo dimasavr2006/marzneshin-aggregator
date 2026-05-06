@@ -359,11 +359,42 @@ def generate_user_configs(
     return configs
 
 
-def proxy_pool_server_to_v2data(srv: ProxyPoolServer, sub: ExternalSubscription | None = None) -> V2Data | None:
+def proxy_pool_server_to_v2data(
+    srv: ProxyPoolServer,
+    sub: ExternalSubscription | None = None,
+    naming_context: dict | None = None,
+) -> V2Data | None:
     """Convert a ProxyPoolServer to V2Data."""
     if not srv.address or not srv.port:
         return None
-    remark = srv.name or f"🌉 {sub.name}" if sub else (srv.name or "Proxy")
+
+    naming_context = naming_context or {}
+    server_name = srv.name or naming_context.get("server_name", "Bridge")
+    sub_name = sub.name if sub else naming_context.get("sub_name", "Proxy")
+
+    # Determine bridge naming
+    if srv.bridge_naming_override:
+        remark = srv.bridge_naming_override.format(
+            server_name=server_name,
+            sub_name=sub_name,
+            protocol=srv.protocol or "vless",
+            address=srv.address,
+            port=srv.port,
+        )
+    elif sub and sub.bridge_naming_template:
+        remark = sub.bridge_naming_template.format(
+            server_name=server_name,
+            sub_name=sub_name,
+            protocol=srv.protocol or "vless",
+            address=srv.address,
+            port=srv.port,
+        )
+    else:
+        if server_name and server_name != "Bridge":
+            remark = f"Bridge ({server_name})"
+        else:
+            remark = "Bridge"
+
     data = V2Data(
         protocol=srv.protocol or "vless",
         remark=remark,
@@ -424,8 +455,10 @@ def get_proxy_pool_configs(
                             continue
                         for cfg in user_configs:
                             wrapped = copy.deepcopy(cfg)
-                            wrapped.remark = f"🌉 [{sub.name}] {cfg.remark}"
-                            wrapped.next = bridge_data
+                            bridge_copy = copy.deepcopy(bridge_data)
+                            bridge_copy.remark = f"{bridge_data.remark} ({cfg.remark})"
+                            wrapped.remark = f"{cfg.remark} via {sub.name}"
+                            wrapped.next = bridge_copy
                             configs.append(wrapped)
         else:
             # For links/clash: only standalone bridge configs (as external VPN)

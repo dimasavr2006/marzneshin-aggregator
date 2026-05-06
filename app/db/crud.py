@@ -1053,6 +1053,7 @@ def create_external_subscription(
     category: str,
     routing_mode: str = "both",
     bridge_naming_template: str | None = None,
+    preferred_bridge_server_id: int | None = None,
     is_active: bool = True,
 ) -> ExternalSubscription:
     sub = ExternalSubscription(
@@ -1063,6 +1064,7 @@ def create_external_subscription(
         category=category,
         routing_mode=routing_mode,
         bridge_naming_template=bridge_naming_template,
+        preferred_bridge_server_id=preferred_bridge_server_id,
         is_active=is_active,
     )
     db.add(sub)

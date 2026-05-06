@@ -52,6 +52,7 @@ def add_subscription(
         category=payload.category,
         routing_mode=payload.routing_mode,
         bridge_naming_template=payload.bridge_naming_template,
+        preferred_bridge_server_id=payload.preferred_bridge_server_id,
         is_active=payload.is_active,
     )
 

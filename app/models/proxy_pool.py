@@ -11,6 +11,7 @@ class ExternalSubscriptionCreate(BaseModel):
     category: Literal["bridge", "external"]
     routing_mode: Literal["direct", "via_node", "both"] = "both"
     bridge_naming_template: str | None = None
+    preferred_bridge_server_id: int | None = None
     is_active: bool = True
 
 
@@ -21,6 +22,7 @@ class ExternalSubscriptionModify(BaseModel):
     category: Literal["bridge", "external"] | None = None
     routing_mode: Literal["direct", "via_node", "both"] | None = None
     bridge_naming_template: str | None = None
+    preferred_bridge_server_id: int | None = None
     is_active: bool | None = None
 
 
@@ -32,6 +34,7 @@ class ExternalSubscriptionResponse(BaseModel):
     category: str
     routing_mode: str
     bridge_naming_template: str | None
+    preferred_bridge_server_id: int | None
     admin_id: int | None
     is_active: bool
     last_sync_at: datetime | None

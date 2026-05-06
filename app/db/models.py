@@ -537,6 +537,7 @@ class ExternalSubscription(Base):
     category = Column(String(32), nullable=False)
     routing_mode = Column(String(32), default="both", server_default="both")
     bridge_naming_template = Column(String(256), nullable=True)
+    preferred_bridge_server_id = Column(Integer, ForeignKey("proxy_pool_servers.id"), nullable=True)
     admin_id = Column(Integer, ForeignKey("admins.id"))
     admin = relationship("Admin", back_populates="external_subscriptions")
     is_active = Column(

@@ -448,7 +448,14 @@ def get_proxy_pool_configs(
         if chaining_support:
             # For sing-box/xray: wrapped configs + standalone bridges
             if user_configs and bridge_servers:
-                srv, sub = bridge_servers[0]
+                # Select bridge server: preferred > first available
+                selected_bridge = bridge_servers[0]
+                for srv, sub in bridge_servers:
+                    if sub.preferred_bridge_server_id and srv.id == sub.preferred_bridge_server_id:
+                        selected_bridge = (srv, sub)
+                        break
+
+                srv, sub = selected_bridge
                 if sub.routing_mode in ("via_node", "both"):
                     bridge_data = proxy_pool_server_to_v2data(srv, sub)
                     if bridge_data:
@@ -484,10 +491,15 @@ def get_proxy_pool_configs(
                 data = proxy_pool_server_to_v2data(srv, sub)
                 if data:
                     if chaining_support and sub.routing_mode == "via_node" and bridge_servers:
-                        # Wrap external through first available bridge
-                        first_bridge = bridge_servers[0]
+                        # Select bridge server: preferred > first available
+                        selected_bridge = bridge_servers[0]
+                        for bsrv, bsub in bridge_servers:
+                            if bsub.preferred_bridge_server_id and bsrv.id == bsub.preferred_bridge_server_id:
+                                selected_bridge = (bsrv, bsub)
+                                break
+
                         bridge_data = proxy_pool_server_to_v2data(
-                            first_bridge[0], first_bridge[1]
+                            selected_bridge[0], selected_bridge[1]
                         )
                         if bridge_data:
                             data.next = bridge_data

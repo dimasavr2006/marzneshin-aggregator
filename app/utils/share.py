@@ -446,7 +446,7 @@ def get_proxy_pool_configs(
                 bridge_servers.append((srv, sub))
 
         if chaining_support:
-            # For sing-box/xray: wrapped configs through single bridge (first available)
+            # For sing-box/xray: wrapped configs + standalone bridges
             if user_configs and bridge_servers:
                 srv, sub = bridge_servers[0]
                 if sub.routing_mode in ("via_node", "both"):
@@ -459,6 +459,12 @@ def get_proxy_pool_configs(
                             wrapped.remark = f"{cfg.remark} via {sub.name}"
                             wrapped.next = bridge_copy
                             configs.append(wrapped)
+            # Add standalone bridge configs for selector visibility
+            for srv, sub in bridge_servers:
+                if sub.routing_mode in ("via_node", "both"):
+                    data = proxy_pool_server_to_v2data(srv, sub)
+                    if data:
+                        configs.append(data)
         else:
             # For links/clash: only standalone bridge configs (as external VPN)
             for srv, sub in bridge_servers:

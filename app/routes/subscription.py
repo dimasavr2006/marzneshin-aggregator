@@ -1,3 +1,4 @@
+import logging
 import re
 from collections import defaultdict
 
@@ -17,6 +18,8 @@ from app.utils.share import (
     generate_subscription_template,
     generate_subscription_html,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sub", tags=["Subscription"])
 
@@ -61,6 +64,12 @@ def user_subscription(
     """
 
     user: UserResponse = UserResponse.model_validate(db_user)
+    accept = request.headers.get("Accept", "")
+
+    logger.info(
+        "Subscription request: user=%s user_agent=%r accept=%r",
+        user.username, user_agent, accept,
+    )
 
     crud.update_user_sub(db, db_user, user_agent)
 
@@ -70,8 +79,12 @@ def user_subscription(
 
     if (
         subscription_settings.template_on_acceptance
-        and "text/html" in request.headers.get("Accept", [])
+        and "text/html" in accept
     ):
+        logger.info(
+            "Returning template for user=%s (template_on_acceptance)",
+            user.username,
+        )
         return HTMLResponse(
             generate_subscription_template(db_user, subscription_settings)
         )
@@ -90,20 +103,25 @@ def user_subscription(
 
     for rule in subscription_settings.rules:
         if re.match(rule.pattern, user_agent):
-            if rule.result.value == "template":
+            result = rule.result.value
+            logger.info(
+                "Rule matched for user=%s: pattern=%r result=%s",
+                user.username, rule.pattern, result,
+            )
+            if result == "template":
                 return HTMLResponse(
                     generate_subscription_template(
                         db_user, subscription_settings
                     )
                 )
-            elif rule.result.value == "block":
+            elif result == "block":
                 raise HTTPException(404)
-            elif rule.result.value == "base64-links":
+            elif result == "base64-links":
                 b64 = True
                 config_format = "links"
             else:
                 b64 = False
-                config_format = rule.result.value
+                config_format = result
 
             conf = generate_subscription(
                 user=db_user,
@@ -120,6 +138,11 @@ def user_subscription(
                 media_type=config_mimetype[rule.result],
                 headers=response_headers,
             )
+
+    logger.warning(
+        "No rule matched for user=%s user_agent=%r",
+        user.username, user_agent,
+    )
 
 
 @router.get("/{username}/{key}/html", response_class=HTMLResponse)
@@ -177,6 +200,11 @@ def user_subscription_with_client_type(
     """
 
     user: UserResponse = UserResponse.model_validate(db_user)
+
+    logger.info(
+        "Direct subscription request: user=%s client_type=%s",
+        user.username, client_type,
+    )
 
     subscription_settings = SubscriptionSettings.model_validate(
         db.query(Settings.subscription).first()[0]

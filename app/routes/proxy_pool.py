@@ -36,6 +36,12 @@ def add_subscription(
     db: DBDep,
     admin: AdminDep,
 ):
+    if payload.category == "bridge" and payload.routing_mode != "via_node":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bridge subscriptions must use routing_mode='via_node'",
+        )
+
     db_admin = crud.get_admin(db, admin.username)
     sub = crud.create_external_subscription(
         db=db,
@@ -122,6 +128,16 @@ def modify_subscription(
     check_subscription_owner(sub, admin)
 
     update_data = payload.model_dump(exclude_unset=True)
+
+    # Validate routing_mode for bridge category
+    category = update_data.get("category") or sub.category
+    routing_mode = update_data.get("routing_mode") or sub.routing_mode
+    if category == "bridge" and routing_mode != "via_node":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bridge subscriptions must use routing_mode='via_node'",
+        )
+
     sub = crud.update_external_subscription(db, sub, **update_data)
     return sub
 

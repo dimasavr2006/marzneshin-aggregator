@@ -466,12 +466,9 @@ def get_proxy_pool_configs(
                     if data:
                         configs.append(data)
         else:
-            # For links/clash: only standalone bridge configs (as external VPN)
-            for srv, sub in bridge_servers:
-                if sub.routing_mode in ("direct", "both"):
-                    data = proxy_pool_server_to_v2data(srv, sub)
-                    if data:
-                        configs.append(data)
+            # For links/clash: bridge configs are intentionally excluded
+            # Bridge credentials are only exposed in chaining-capable formats
+            pass
 
         # External VPN servers
         external_subs = get_external_subscriptions(

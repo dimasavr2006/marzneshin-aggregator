@@ -57,6 +57,19 @@ def _parse_links(text: str) -> list[dict[str, Any]]:
     return servers
 
 
+def parse_single_link(url: str) -> dict[str, Any]:
+    """Parse a single proxy URL (vless, vmess, or trojan)."""
+    url = decode_json_escapes(url.strip())
+    if url.startswith("vless://"):
+        return parse_vless(url)
+    elif url.startswith("vmess://"):
+        return _parse_vmess(url)
+    elif url.startswith("trojan://"):
+        return _parse_trojan(url)
+    else:
+        raise ValueError(f"Unsupported proxy URL scheme: {url[:20]}...")
+
+
 def _parse_vmess(url: str) -> dict[str, Any]:
     """Parse a vmess:// URL (base64 JSON)."""
     url = decode_json_escapes(url)

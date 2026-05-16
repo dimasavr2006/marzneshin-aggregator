@@ -12,7 +12,7 @@ from app.models.proxy_pool import (
     ProxyPoolServerResponse,
 )
 from app.utils.vless_parser import parse_vless
-from app.utils.subscription_parser import parse_subscription
+from app.utils.subscription_parser import parse_subscription, parse_single_link
 from app.templates import render_template
 from fastapi.responses import HTMLResponse
 import asyncio
@@ -28,6 +28,53 @@ def check_subscription_owner(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not allowed to access this subscription",
         )
+
+
+def _sync_subscription_data(db: Session, sub: ExternalSubscription):
+    """Fetch and parse subscription URL, update servers."""
+    crud.remove_proxy_pool_servers(db, sub.id)
+
+    if sub.type in ("vless", "vmess", "trojan") and (
+        sub.url.startswith("vless://")
+        or sub.url.startswith("vmess://")
+        or sub.url.startswith("trojan://")
+    ):
+        try:
+            parsed = parse_single_link(sub.url)
+            crud.create_proxy_pool_server(
+                db=db,
+                subscription_id=sub.id,
+                **{k: v for k, v in parsed.items() if k != "name"},
+                name=parsed.get("name") or sub.name,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid proxy URL: {exc}",
+            )
+    elif sub.type == "subscription":
+        import requests
+        try:
+            resp = requests.get(sub.url, timeout=15)
+            resp.raise_for_status()
+            servers = parse_subscription(resp.text)
+            for srv in servers:
+                crud.create_proxy_pool_server(
+                    db=db,
+                    subscription_id=sub.id,
+                    **{k: v for k, v in srv.items() if k != "name"},
+                    name=srv.get("name") or sub.name,
+                )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to sync subscription: {exc}",
+            )
+
+    from datetime import datetime
+    sub.last_sync_at = datetime.utcnow()
+    db.commit()
+    db.refresh(sub)
 
 
 @router.post("/subscriptions", response_model=ExternalSubscriptionResponse)
@@ -56,10 +103,14 @@ def add_subscription(
         is_active=payload.is_active,
     )
 
-    # If it's a single vless link, parse it immediately
-    if payload.type == "vless" and payload.url.startswith("vless://"):
+    # If it's a single proxy link, parse it immediately
+    if payload.type in ("vless", "vmess", "trojan") and (
+        payload.url.startswith("vless://")
+        or payload.url.startswith("vmess://")
+        or payload.url.startswith("trojan://")
+    ):
         try:
-            parsed = parse_vless(payload.url)
+            parsed = parse_single_link(payload.url)
             crud.create_proxy_pool_server(
                 db=db,
                 subscription_id=sub.id,
@@ -69,7 +120,17 @@ def add_subscription(
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid vless URL: {exc}",
+                detail=f"Invalid proxy URL: {exc}",
+            )
+    elif payload.type == "subscription":
+        try:
+            _sync_subscription_data(db, sub)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to sync subscription: {exc}",
             )
 
     return sub
@@ -140,6 +201,19 @@ def modify_subscription(
         )
 
     sub = crud.update_external_subscription(db, sub, **update_data)
+
+    # Auto-sync if URL or type changed
+    if "url" in update_data or "type" in update_data:
+        try:
+            _sync_subscription_data(db, sub)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to sync subscription after update: {exc}",
+            )
+
     return sub
 
 
@@ -168,52 +242,7 @@ def sync_subscription(
         raise HTTPException(status_code=404, detail="Subscription not found")
     check_subscription_owner(sub, admin)
 
-    # Remove old servers
-    crud.remove_proxy_pool_servers(db, sub_id)
-
-    if sub.type in ("vless", "vmess", "trojan") and (
-        sub.url.startswith("vless://")
-        or sub.url.startswith("vmess://")
-        or sub.url.startswith("trojan://")
-    ):
-        # Single proxy link
-        try:
-            parsed = parse_vless(sub.url)
-            crud.create_proxy_pool_server(
-                db=db,
-                subscription_id=sub.id,
-                **{k: v for k, v in parsed.items() if k != "name"},
-                name=parsed.get("name") or sub.name,
-            )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid proxy URL: {exc}",
-            )
-    elif sub.type == "subscription":
-        # Fetch and parse subscription URL
-        import requests
-        try:
-            resp = requests.get(sub.url, timeout=15)
-            resp.raise_for_status()
-            servers = parse_subscription(resp.text)
-            for srv in servers:
-                crud.create_proxy_pool_server(
-                    db=db,
-                    subscription_id=sub.id,
-                    **{k: v for k, v in srv.items() if k != "name"},
-                    name=srv.get("name") or sub.name,
-                )
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to sync subscription: {exc}",
-            )
-
-    from datetime import datetime
-    sub.last_sync_at = datetime.utcnow()
-    db.commit()
-    db.refresh(sub)
+    _sync_subscription_data(db, sub)
     return {"status": "synced", "subscription_id": sub_id}
 
 

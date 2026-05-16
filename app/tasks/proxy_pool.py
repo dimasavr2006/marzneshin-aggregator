@@ -11,8 +11,7 @@ from app.db.crud import (
     remove_proxy_pool_servers,
     create_proxy_pool_server,
 )
-from app.utils.subscription_parser import parse_subscription
-from app.utils.vless_parser import parse_vless
+from app.utils.subscription_parser import parse_subscription, parse_single_link
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ async def sync_all_subscriptions():
                     or sub.url.startswith("vmess://")
                     or sub.url.startswith("trojan://")
                 ):
-                    parsed = parse_vless(sub.url)
+                    parsed = parse_single_link(sub.url)
                     create_proxy_pool_server(
                         db=db,
                         subscription_id=sub.id,

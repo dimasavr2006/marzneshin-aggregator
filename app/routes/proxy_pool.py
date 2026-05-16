@@ -30,6 +30,32 @@ def check_subscription_owner(
         )
 
 
+def _validate_bridge_subscription(
+    db: Session,
+    admin: Admin,
+    bridge_subscription_id: int | None,
+):
+    """Validate that bridge subscription exists, is a bridge, and is owned by admin."""
+    if bridge_subscription_id is None:
+        return
+    bridge_sub = crud.get_external_subscription(db, bridge_subscription_id)
+    if not bridge_sub:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Bridge subscription {bridge_subscription_id} not found",
+        )
+    if bridge_sub.category != "bridge":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected subscription is not a bridge",
+        )
+    if not admin.is_sudo and bridge_sub.admin_id != admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bridge subscription does not belong to you",
+        )
+
+
 def _validate_preferred_server(
     db: Session,
     sub: ExternalSubscription,
@@ -145,6 +171,7 @@ def add_subscription(
         routing_mode=payload.routing_mode,
         bridge_naming_template=payload.bridge_naming_template,
         preferred_bridge_server_id=payload.preferred_bridge_server_id,
+        bridge_subscription_id=payload.bridge_subscription_id,
         is_active=payload.is_active,
     )
 
@@ -182,6 +209,10 @@ def add_subscription(
     if payload.preferred_bridge_server_id is not None:
         _validate_preferred_server(db, sub, payload.preferred_bridge_server_id)
 
+    # Validate bridge subscription if provided
+    if payload.bridge_subscription_id is not None:
+        _validate_bridge_subscription(db, admin, payload.bridge_subscription_id)
+
     return sub
 
 
@@ -192,9 +223,12 @@ def list_subscriptions(
     category: str | None = None,
 ):
     query_admin_id = None if admin.is_sudo else admin.id
-    return crud.get_external_subscriptions(
+    subs = crud.get_external_subscriptions(
         db, admin_id=query_admin_id, category=category
     )
+    for sub in subs:
+        sub.server_count = len(crud.get_proxy_pool_servers(db, subscription_id=sub.id))
+    return subs
 
 
 @router.get("/subscriptions/{sub_id}", response_model=ExternalSubscriptionResponse)
@@ -207,6 +241,7 @@ def get_subscription(
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     check_subscription_owner(sub, admin)
+    sub.server_count = len(crud.get_proxy_pool_servers(db, subscription_id=sub.id))
     return sub
 
 
@@ -267,6 +302,11 @@ def modify_subscription(
     preferred_id = update_data.get("preferred_bridge_server_id")
     if preferred_id is not None:
         _validate_preferred_server(db, sub, preferred_id)
+
+    # Validate bridge subscription if updated
+    bridge_sub_id = update_data.get("bridge_subscription_id")
+    if bridge_sub_id is not None:
+        _validate_bridge_subscription(db, admin, bridge_sub_id)
 
     return sub
 

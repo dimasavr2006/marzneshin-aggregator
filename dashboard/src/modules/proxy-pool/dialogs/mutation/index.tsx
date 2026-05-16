@@ -38,6 +38,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
     const { t } = useTranslation();
     const [servers, setServers] = useState<Array<{ id: number; name: string | null; address: string | null; port: number | null }>>([]);
     const [serversLoading, setServersLoading] = useState(false);
+    const [bridgeSubs, setBridgeSubs] = useState<Pool[]>([]);
 
     const defaultValue = useMemo(() => ({
         name: "",
@@ -47,6 +48,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
         routing_mode: "both" as const,
         bridge_naming_template: null as string | null,
         preferred_bridge_server_id: null as number | null,
+        bridge_subscription_id: null as number | null,
         is_active: true,
     }), []);
 
@@ -60,6 +62,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
     });
 
     const category = form.watch("category");
+    const routingMode = form.watch("routing_mode");
 
     useEffect(() => {
         if (entity?.id && category === "bridge") {
@@ -72,6 +75,13 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
             setServers([]);
         }
     }, [entity?.id, category]);
+
+    useEffect(() => {
+        import("@marzneshin/common/utils")
+            .then(({ fetch }) => fetch("/proxy-pool/subscriptions?category=bridge"))
+            .then((data) => setBridgeSubs(data || []))
+            .catch(() => setBridgeSubs([]));
+    }, []);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange} defaultOpen={true}>
@@ -238,6 +248,38 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                                     {servers.map((srv) => (
                                                         <SelectItem key={srv.id} value={String(srv.id)}>
                                                             {srv.name || `${srv.address}:${srv.port}`}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                        {category === "external" && routingMode === "via_node" && (
+                            <FormField
+                                control={form.control}
+                                name="bridge_subscription_id"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>{t("page.proxy-pools.bridge_subscription")}</FormLabel>
+                                        <FormControl>
+                                            <Select
+                                                onValueChange={(val) => field.onChange(val === "null" ? null : Number(val))}
+                                                defaultValue={field.value?.toString() || "null"}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={t("page.proxy-pools.bridge_subscription_placeholder")} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="null">
+                                                        {t("page.proxy-pools.bridge_subscription_auto")}
+                                                    </SelectItem>
+                                                    {bridgeSubs.map((bsub) => (
+                                                        <SelectItem key={bsub.id} value={String(bsub.id)}>
+                                                            {bsub.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>

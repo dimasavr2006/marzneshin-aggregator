@@ -491,12 +491,23 @@ def get_proxy_pool_configs(
                 data = proxy_pool_server_to_v2data(srv, sub)
                 if data:
                     if chaining_support and sub.routing_mode == "via_node" and bridge_servers:
-                        # Select bridge server: preferred > first available
-                        selected_bridge = bridge_servers[0]
-                        for bsrv, bsub in bridge_servers:
-                            if bsub.preferred_bridge_server_id and bsrv.id == bsub.preferred_bridge_server_id:
-                                selected_bridge = (bsrv, bsub)
-                                break
+                        # Select bridge: specific subscription > preferred > first available
+                        selected_bridge = None
+                        if sub.bridge_subscription_id:
+                            # Find bridge from specified subscription
+                            for bsrv, bsub in bridge_servers:
+                                if bsub.id == sub.bridge_subscription_id:
+                                    if bsub.preferred_bridge_server_id and bsrv.id == bsub.preferred_bridge_server_id:
+                                        selected_bridge = (bsrv, bsub)
+                                        break
+                                    elif selected_bridge is None or selected_bridge[1].id != bsub.id:
+                                        selected_bridge = (bsrv, bsub)
+                        if selected_bridge is None:
+                            selected_bridge = bridge_servers[0]
+                            for bsrv, bsub in bridge_servers:
+                                if bsub.preferred_bridge_server_id and bsrv.id == bsub.preferred_bridge_server_id:
+                                    selected_bridge = (bsrv, bsub)
+                                    break
 
                         bridge_data = proxy_pool_server_to_v2data(
                             selected_bridge[0], selected_bridge[1]

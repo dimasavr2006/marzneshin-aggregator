@@ -111,6 +111,9 @@
       "preferred_server_auto": "Auto (first available)",
       "preferred_server_create_hint": "Save and sync to select server",
       "set_preferred": "Set Preferred",
+      "bridge_subscription": "Bridge Subscription",
+      "bridge_subscription_placeholder": "Select bridge subscription",
+      "bridge_subscription_auto": "Auto (any bridge)",
       "last_sync": "Last Sync",
       "sync": {
         "action": "Sync",

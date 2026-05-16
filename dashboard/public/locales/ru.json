@@ -133,6 +133,9 @@
       "preferred_server_auto": "Авто (первый доступный)",
       "preferred_server_create_hint": "Сохраните и синхронизируйте для выбора",
       "set_preferred": "Сделать предпочитаемым",
+      "bridge_subscription": "Подписка бриджа",
+      "bridge_subscription_placeholder": "Выберите подписку бриджа",
+      "bridge_subscription_auto": "Авто (любой бридж)",
       "last_sync": "Последняя синхронизация",
       "fields": {
 	"url": "URL"

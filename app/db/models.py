@@ -538,6 +538,7 @@ class ExternalSubscription(Base):
     routing_mode = Column(String(32), default="both", server_default="both")
     bridge_naming_template = Column(String(256), nullable=True)
     preferred_bridge_server_id = Column(Integer, ForeignKey("proxy_pool_servers.id"), nullable=True)
+    bridge_subscription_id = Column(Integer, ForeignKey("external_subscriptions.id"), nullable=True)
     admin_id = Column(Integer, ForeignKey("admins.id"))
     admin = relationship("Admin", back_populates="external_subscriptions")
     is_active = Column(
@@ -555,13 +556,6 @@ class ExternalSubscription(Base):
         back_populates="subscription",
         cascade="all, delete, delete-orphan",
         foreign_keys="ProxyPoolServer.subscription_id",
-    )
-
-    server_count = column_property(
-        select(func.count("ProxyPoolServer.id"))
-        .where("ProxyPoolServer.subscription_id" == "ExternalSubscription.id")
-        .correlate_externally("ExternalSubscription")
-        .scalar_subquery()
     )
 
 

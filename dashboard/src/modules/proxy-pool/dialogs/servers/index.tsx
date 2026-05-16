@@ -14,8 +14,9 @@ import {
     Badge,
 } from "@marzneshin/common/components";
 import { useTranslation } from "react-i18next";
-import { usePoolsSyncMutation, usePoolsUpdateMutation, type Pool, type PoolServer } from "@marzneshin/modules/proxy-pool";
-import { Loader2, RefreshCw, Star } from "lucide-react";
+import { usePoolsSyncMutation, usePoolsUpdateMutation, usePoolServerUpdateMutation, type Pool, type PoolServer } from "@marzneshin/modules/proxy-pool";
+import { Loader2, RefreshCw, Star, Pencil, X, Check } from "lucide-react";
+import { Input } from "@marzneshin/common/components";
 
 interface ServersDialogProps {
     open: boolean;
@@ -38,6 +39,10 @@ export const ServersDialog: FC<ServersDialogProps> = ({
     const [servers, setServers] = useState<PoolServer[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [settingPreferredId, setSettingPreferredId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editName, setEditName] = useState("");
+    const [editNaming, setEditNaming] = useState("");
+    const serverUpdateMutation = usePoolServerUpdateMutation();
 
     const fetchServers = async () => {
         if (!pool?.id) return;
@@ -75,6 +80,34 @@ export const ServersDialog: FC<ServersDialogProps> = ({
                 onSettled: () => setSettingPreferredId(null),
             }
         );
+    };
+
+    const handleEditStart = (server: PoolServer) => {
+        setEditingId(server.id);
+        setEditName(server.name || "");
+        setEditNaming(server.bridge_naming_override || "");
+    };
+
+    const handleEditSave = (serverId: number) => {
+        serverUpdateMutation.mutate(
+            {
+                serverId,
+                data: {
+                    name: editName || null,
+                    bridge_naming_override: editNaming || null,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditingId(null);
+                    fetchServers();
+                },
+            }
+        );
+    };
+
+    const handleEditCancel = () => {
+        setEditingId(null);
     };
 
     return (
@@ -120,7 +153,7 @@ export const ServersDialog: FC<ServersDialogProps> = ({
                                     <TableHead>{t("type")}</TableHead>
                                     <TableHead>{t("page.proxy-pools.latency")}</TableHead>
                                     <TableHead>{t("status")}</TableHead>
-                                    {pool.category === "bridge" && <TableHead>{t("actions")}</TableHead>}
+                                    <TableHead>{t("actions")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -135,14 +168,31 @@ export const ServersDialog: FC<ServersDialogProps> = ({
                                     >
                                         <TableCell className="font-mono text-xs">{server.id}</TableCell>
                                         <TableCell>
-                                            <div className="flex flex-col">
-                                                <span>{server.name || "-"}</span>
-                                                {server.bridge_naming_override && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {server.bridge_naming_override}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            {editingId === server.id ? (
+                                                <div className="flex flex-col gap-1">
+                                                    <Input
+                                                        value={editName}
+                                                        onChange={(e) => setEditName(e.target.value)}
+                                                        placeholder={t("name")}
+                                                        className="h-7 text-sm"
+                                                    />
+                                                    <Input
+                                                        value={editNaming}
+                                                        onChange={(e) => setEditNaming(e.target.value)}
+                                                        placeholder={t("page.proxy-pools.bridge_naming_template")}
+                                                        className="h-7 text-sm"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col">
+                                                    <span>{server.name || "-"}</span>
+                                                    {server.bridge_naming_override && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {server.bridge_naming_override}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell>{server.address}:{server.port}</TableCell>
                                         <TableCell className="capitalize">{server.protocol}</TableCell>
@@ -152,26 +202,60 @@ export const ServersDialog: FC<ServersDialogProps> = ({
                                         <TableCell>
                                             <StatusBadge isAvailable={server.is_available} />
                                         </TableCell>
-                                        {pool.category === "bridge" && (
-                                            <TableCell>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleSetPreferred(server.id)}
-                                                    disabled={settingPreferredId === server.id}
-                                                >
-                                                    {settingPreferredId === server.id ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                                                    ) : (
-                                                        <Star className="h-4 w-4 mr-1" />
-                                                    )}
-                                                    {pool.preferred_bridge_server_id === server.id
-                                                        ? t("page.proxy-pools.preferred_server")
-                                                        : t("page.proxy-pools.set_preferred")
-                                                    }
-                                                </Button>
-                                            </TableCell>
-                                        )}
+                                        <TableCell>
+                                            <div className="flex items-center gap-1">
+                                                {editingId === server.id ? (
+                                                    <>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7"
+                                                            onClick={() => handleEditSave(server.id)}
+                                                            disabled={serverUpdateMutation.isPending}
+                                                        >
+                                                            <Check className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7"
+                                                            onClick={handleEditCancel}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7"
+                                                            onClick={() => handleEditStart(server)}
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                        {pool.category === "bridge" && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleSetPreferred(server.id)}
+                                                                disabled={settingPreferredId === server.id}
+                                                            >
+                                                                {settingPreferredId === server.id ? (
+                                                                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                                                ) : (
+                                                                    <Star className="h-4 w-4 mr-1" />
+                                                                )}
+                                                                {pool.preferred_bridge_server_id === server.id
+                                                                    ? t("page.proxy-pools.preferred_server")
+                                                                    : t("page.proxy-pools.set_preferred")
+                                                                }
+                                                            </Button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

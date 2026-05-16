@@ -64,3 +64,8 @@ class ProxyPoolServerResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProxyPoolServerModify(BaseModel):
+    name: str | None = None
+    bridge_naming_override: str | None = None

@@ -1119,6 +1119,17 @@ def get_proxy_pool_server(db: Session, server_id: int) -> ProxyPoolServer | None
     return db.query(ProxyPoolServer).filter(ProxyPoolServer.id == server_id).first()
 
 
+def update_proxy_pool_server(
+    db: Session, server: ProxyPoolServer, **kwargs
+) -> ProxyPoolServer:
+    for key, value in kwargs.items():
+        if hasattr(server, key) and value is not None:
+            setattr(server, key, value)
+    db.commit()
+    db.refresh(server)
+    return server
+
+
 def get_proxy_pool_servers(
     db: Session,
     subscription_id: int | None = None,

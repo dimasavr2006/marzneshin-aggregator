@@ -67,8 +67,9 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
     useEffect(() => {
         if (entity?.id && category === "bridge") {
             setServersLoading(true);
-            fetchPoolServers(entity.id)
-                .then((data) => setServers(data))
+            import("@marzneshin/modules/proxy-pool")
+                .then(({ fetchPoolServers }) => fetchPoolServers(entity.id))
+                .then((data: Array<{ id: number; name: string | null; address: string | null; port: number | null }>) => setServers(data))
                 .catch(() => setServers([]))
                 .finally(() => setServersLoading(false));
         } else {

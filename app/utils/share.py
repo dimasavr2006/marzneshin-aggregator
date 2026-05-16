@@ -440,8 +440,10 @@ def get_proxy_pool_configs(
             if not sub.is_active:
                 continue
             servers = get_proxy_pool_servers(
-                db, subscription_id=sub.id, is_available=True
+                db, subscription_id=sub.id
             )
+            # Sort available servers first
+            servers.sort(key=lambda s: not s.is_available)
             for srv in servers:
                 bridge_servers.append((srv, sub))
 
@@ -485,8 +487,10 @@ def get_proxy_pool_configs(
             if not sub.is_active:
                 continue
             servers = get_proxy_pool_servers(
-                db, subscription_id=sub.id, is_available=True
+                db, subscription_id=sub.id
             )
+            # Sort available servers first
+            servers.sort(key=lambda s: not s.is_available)
             for srv in servers:
                 data = proxy_pool_server_to_v2data(srv, sub)
                 if data:
@@ -517,6 +521,8 @@ def get_proxy_pool_configs(
                             data.remark = f"🔗 [{sub.name} via bridge] {data.remark}"
                     else:
                         data.remark = f"🔗 [{sub.name}] {data.remark}"
+                    if not srv.is_available:
+                        data.remark = f"🔴 {data.remark}"
                     configs.append(data)
 
     return configs

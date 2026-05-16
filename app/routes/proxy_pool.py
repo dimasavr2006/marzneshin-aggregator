@@ -76,7 +76,11 @@ def _sync_subscription_data(db: Session, sub: ExternalSubscription):
     elif sub.type == "subscription":
         import requests
         try:
-            resp = requests.get(sub.url, timeout=15)
+            resp = requests.get(
+                sub.url,
+                timeout=15,
+                headers={"User-Agent": "Marzneshin/1.0"},
+            )
             resp.raise_for_status()
             servers = parse_subscription(resp.text)
             for srv in servers:

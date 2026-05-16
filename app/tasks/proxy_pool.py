@@ -39,7 +39,11 @@ async def sync_all_subscriptions():
                         name=parsed.get("name") or sub.name,
                     )
                 elif sub.type == "subscription":
-                    resp = requests.get(sub.url, timeout=15)
+                    resp = requests.get(
+                        sub.url,
+                        timeout=15,
+                        headers={"User-Agent": "Marzneshin/1.0"},
+                    )
                     resp.raise_for_status()
                     servers = parse_subscription(resp.text)
                     for srv in servers:

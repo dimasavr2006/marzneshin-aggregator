@@ -1113,6 +1113,10 @@ def create_proxy_pool_server(db: Session, subscription_id: int, **kwargs) -> Pro
     return server
 
 
+def get_proxy_pool_server(db: Session, server_id: int) -> ProxyPoolServer | None:
+    return db.query(ProxyPoolServer).filter(ProxyPoolServer.id == server_id).first()
+
+
 def get_proxy_pool_servers(
     db: Session,
     subscription_id: int | None = None,

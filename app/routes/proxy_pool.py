@@ -30,6 +30,27 @@ def check_subscription_owner(
         )
 
 
+def _validate_preferred_server(
+    db: Session,
+    sub: ExternalSubscription,
+    preferred_bridge_server_id: int | None,
+):
+    """Validate that preferred server exists and belongs to this subscription."""
+    if preferred_bridge_server_id is None:
+        return
+    server = crud.get_proxy_pool_server(db, preferred_bridge_server_id)
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Preferred bridge server {preferred_bridge_server_id} not found",
+        )
+    if server.subscription_id != sub.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Preferred bridge server does not belong to this subscription",
+        )
+
+
 def _sync_subscription_data(db: Session, sub: ExternalSubscription):
     """Fetch and parse subscription URL, update servers."""
     crud.remove_proxy_pool_servers(db, sub.id)
@@ -133,6 +154,10 @@ def add_subscription(
                 detail=f"Failed to sync subscription: {exc}",
             )
 
+    # Validate preferred server if provided
+    if payload.preferred_bridge_server_id is not None:
+        _validate_preferred_server(db, sub, payload.preferred_bridge_server_id)
+
     return sub
 
 
@@ -213,6 +238,11 @@ def modify_subscription(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to sync subscription after update: {exc}",
             )
+
+    # Validate preferred server if updated
+    preferred_id = update_data.get("preferred_bridge_server_id")
+    if preferred_id is not None:
+        _validate_preferred_server(db, sub, preferred_id)
 
     return sub
 

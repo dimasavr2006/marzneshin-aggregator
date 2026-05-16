@@ -1,7 +1,7 @@
 import { FC, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EntityTable } from "@marzneshin/libs/entity-table";
-import { fetchPools, Pool } from "@marzneshin/modules/proxy-pool";
+import { fetchPools, Pool, usePoolsSyncMutation } from "@marzneshin/modules/proxy-pool";
 import { Tabs, TabsList, TabsTrigger } from "@marzneshin/common/components";
 import { useTranslation } from "react-i18next";
 import { columns } from "./columns";
@@ -12,6 +12,8 @@ export const PoolsTable: FC = () => {
     const navigate = useNavigate({ from: "/proxy-pools" });
     const { t } = useTranslation();
     const [category, setCategory] = useState<CategoryFilter>("all");
+    const [syncingId, setSyncingId] = useState<number | null>(null);
+    const syncMutation = usePoolsSyncMutation();
 
     const entityKey = category === "all" ? "proxy-pools" : `proxy-pools-${category}`;
 
@@ -30,7 +32,14 @@ export const PoolsTable: FC = () => {
         params: { poolId: String(entity.id) } 
     });
 
-    const columnsDef = columns({ onEdit, onDelete, onOpen });
+    const onSync = (entity: Pool) => {
+        setSyncingId(entity.id);
+        syncMutation.mutate(entity.id, {
+            onSettled: () => setSyncingId(null),
+        });
+    };
+
+    const columnsDef = columns({ onEdit, onDelete, onOpen }, onSync, syncingId);
 
     return (
         <div className="flex flex-col gap-4 w-full">

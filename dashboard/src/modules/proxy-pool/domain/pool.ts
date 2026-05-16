@@ -33,6 +33,7 @@ export const PoolServerSchema = z.object({
     latency_ms: z.number().nullable(),
     last_tested_at: z.string().datetime().nullable(),
     is_available: z.boolean(),
+    bridge_naming_override: z.string().nullable(),
     created_at: z.string().datetime(),
 });
 

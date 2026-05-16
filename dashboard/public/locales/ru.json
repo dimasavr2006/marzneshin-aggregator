@@ -132,6 +132,7 @@
       "preferred_server_placeholder": "Выберите предпочитаемый сервер",
       "preferred_server_auto": "Авто (первый доступный)",
       "preferred_server_create_hint": "Сохраните и синхронизируйте для выбора",
+      "set_preferred": "Сделать предпочитаемым",
       "last_sync": "Последняя синхронизация",
       "fields": {
 	"url": "URL"

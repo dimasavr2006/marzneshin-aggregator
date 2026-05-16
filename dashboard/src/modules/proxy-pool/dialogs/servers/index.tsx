@@ -14,8 +14,8 @@ import {
     Badge,
 } from "@marzneshin/common/components";
 import { useTranslation } from "react-i18next";
-import { usePoolsSyncMutation, type Pool, type PoolServer } from "@marzneshin/modules/proxy-pool";
-import { Loader2, RefreshCw } from "lucide-react";
+import { usePoolsSyncMutation, usePoolsUpdateMutation, type Pool, type PoolServer } from "@marzneshin/modules/proxy-pool";
+import { Loader2, RefreshCw, Star } from "lucide-react";
 
 interface ServersDialogProps {
     open: boolean;
@@ -34,8 +34,10 @@ export const ServersDialog: FC<ServersDialogProps> = ({
 }) => {
     const { t } = useTranslation();
     const syncMutation = usePoolsSyncMutation();
+    const updateMutation = usePoolsUpdateMutation();
     const [servers, setServers] = useState<PoolServer[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [settingPreferredId, setSettingPreferredId] = useState<number | null>(null);
 
     const fetchServers = async () => {
         if (!pool?.id) return;
@@ -63,6 +65,16 @@ export const ServersDialog: FC<ServersDialogProps> = ({
                 fetchServers();
             }
         });
+    };
+
+    const handleSetPreferred = (serverId: number) => {
+        setSettingPreferredId(serverId);
+        updateMutation.mutate(
+            { ...pool, preferred_bridge_server_id: serverId },
+            {
+                onSettled: () => setSettingPreferredId(null),
+            }
+        );
     };
 
     return (
@@ -102,17 +114,36 @@ export const ServersDialog: FC<ServersDialogProps> = ({
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-16">ID</TableHead>
                                     <TableHead>{t("name")}</TableHead>
                                     <TableHead>{t("address")}</TableHead>
                                     <TableHead>{t("type")}</TableHead>
                                     <TableHead>{t("page.proxy-pools.latency")}</TableHead>
                                     <TableHead>{t("status")}</TableHead>
+                                    {pool.category === "bridge" && <TableHead>{t("actions")}</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {servers.map((server) => (
-                                    <TableRow key={server.id}>
-                                        <TableCell>{server.name || "-"}</TableCell>
+                                    <TableRow
+                                        key={server.id}
+                                        className={
+                                            pool.preferred_bridge_server_id === server.id
+                                                ? "bg-primary/10"
+                                                : undefined
+                                        }
+                                    >
+                                        <TableCell className="font-mono text-xs">{server.id}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span>{server.name || "-"}</span>
+                                                {server.bridge_naming_override && (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {server.bridge_naming_override}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell>{server.address}:{server.port}</TableCell>
                                         <TableCell className="capitalize">{server.protocol}</TableCell>
                                         <TableCell>
@@ -121,6 +152,26 @@ export const ServersDialog: FC<ServersDialogProps> = ({
                                         <TableCell>
                                             <StatusBadge isAvailable={server.is_available} />
                                         </TableCell>
+                                        {pool.category === "bridge" && (
+                                            <TableCell>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleSetPreferred(server.id)}
+                                                    disabled={settingPreferredId === server.id}
+                                                >
+                                                    {settingPreferredId === server.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                                    ) : (
+                                                        <Star className="h-4 w-4 mr-1" />
+                                                    )}
+                                                    {pool.preferred_bridge_server_id === server.id
+                                                        ? t("page.proxy-pools.preferred_server")
+                                                        : t("page.proxy-pools.set_preferred")
+                                                    }
+                                                </Button>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>

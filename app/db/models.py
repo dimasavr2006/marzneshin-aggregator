@@ -24,7 +24,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql.expression import text
+from sqlalchemy.sql.expression import text, select, func
 
 from app.config.env import SUBSCRIPTION_URL_PREFIX
 from app.db.base import Base
@@ -555,6 +555,13 @@ class ExternalSubscription(Base):
         back_populates="subscription",
         cascade="all, delete, delete-orphan",
         foreign_keys="ProxyPoolServer.subscription_id",
+    )
+
+    server_count = column_property(
+        select(func.count("ProxyPoolServer.id"))
+        .where("ProxyPoolServer.subscription_id" == "ExternalSubscription.id")
+        .correlate_externally("ExternalSubscription")
+        .scalar_subquery()
     )
 
 

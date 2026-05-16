@@ -37,6 +37,7 @@ class ExternalSubscriptionResponse(BaseModel):
     preferred_bridge_server_id: int | None
     admin_id: int | None
     is_active: bool
+    server_count: int = 0
     last_sync_at: datetime | None
     created_at: datetime
 

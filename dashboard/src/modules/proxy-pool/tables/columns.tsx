@@ -45,6 +45,15 @@ export const columns = (actions: ColumnActions<Pool>): ColumnDef<Pool>[] => ([
         header: ({ column }) => <DataTableColumnHeader title={i18n.t('page.proxy-pools.routing_mode')} column={column} />,
     },
     {
+        accessorKey: "server_count",
+        header: ({ column }) => <DataTableColumnHeader title={i18n.t('page.proxy-pools.servers.count')} column={column} />,
+        cell: ({ row }) => (
+            <Badge variant={row.original.server_count > 0 ? "default" : "destructive"}>
+                {row.original.server_count} {i18n.t('page.proxy-pools.servers.count')}
+            </Badge>
+        ),
+    },
+    {
         accessorKey: "is_active",
         header: ({ column }) => <DataTableColumnHeader title={i18n.t('status')} column={column} />,
         cell: ({ row }) => <ActiveBadge isActive={row.original.is_active} />,

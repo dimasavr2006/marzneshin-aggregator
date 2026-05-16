@@ -14,6 +14,7 @@ export const PoolSchema = z.object({
     bridge_naming_template: z.string().nullable(),
     preferred_bridge_server_id: z.number().nullable(),
     is_active: z.boolean(),
+    server_count: z.number().default(0),
     last_sync_at: z.string().datetime().nullable(),
     created_at: z.string().datetime(),
     admin_id: z.number().nullable(),

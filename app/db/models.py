@@ -554,6 +554,7 @@ class ExternalSubscription(Base):
         "ProxyPoolServer",
         back_populates="subscription",
         cascade="all, delete, delete-orphan",
+        foreign_keys="ProxyPoolServer.subscription_id",
     )
 
 
@@ -562,7 +563,11 @@ class ProxyPoolServer(Base):
 
     id = Column(Integer, primary_key=True)
     subscription_id = Column(Integer, ForeignKey("external_subscriptions.id"))
-    subscription = relationship("ExternalSubscription", back_populates="servers")
+    subscription = relationship(
+        "ExternalSubscription",
+        back_populates="servers",
+        foreign_keys=[subscription_id],
+    )
 
     protocol = Column(String(32))
     name = Column(String(256))

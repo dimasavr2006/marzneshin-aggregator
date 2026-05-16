@@ -86,6 +86,26 @@ def _sync_subscription_data(db: Session, sub: ExternalSubscription):
                     **{k: v for k, v in srv.items() if k != "name"},
                     name=srv.get("name") or sub.name,
                 )
+        except requests.exceptions.Timeout:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Connection timeout while fetching subscription",
+            )
+        except requests.exceptions.ConnectionError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Connection error: unable to reach subscription URL",
+            )
+        except requests.exceptions.HTTPError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"HTTP error from subscription URL: {exc.response.status_code}",
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to parse subscription content: {exc}",
+            )
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

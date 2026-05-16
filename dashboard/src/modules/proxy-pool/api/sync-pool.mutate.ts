@@ -11,8 +11,9 @@ export async function fetchSyncPool(subId: number): Promise<{ status: string; su
 export const usePoolsSyncMutation = () => {
     return useMutation({
         mutationFn: fetchSyncPool,
-        onError: (_error: Error) => {
-            toast.error(i18n.t('page.proxy-pools.sync.error'));
+        onError: (error: any) => {
+            const detail = error?.response?.detail || error?.message || i18n.t('page.proxy-pools.sync.error');
+            toast.error(detail);
         },
         onSuccess: () => {
             toast.success(i18n.t('page.proxy-pools.sync.success'));

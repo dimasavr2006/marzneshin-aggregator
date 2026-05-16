@@ -22,6 +22,14 @@ export const columns = (actions: ColumnActions<Pool>): ColumnDef<Pool>[] => ([
     {
         accessorKey: "name",
         header: ({ column }) => <DataTableColumnHeader title={i18n.t('name')} column={column} />,
+        cell: ({ row }) => (
+            <span className="flex items-center gap-1">
+                {row.original.name}
+                {row.original.preferred_bridge_server_id !== null && row.original.category === "bridge" && (
+                    <span title={i18n.t('page.proxy-pools.preferred_server')}>⭐</span>
+                )}
+            </span>
+        ),
     },
     {
         accessorKey: "category",

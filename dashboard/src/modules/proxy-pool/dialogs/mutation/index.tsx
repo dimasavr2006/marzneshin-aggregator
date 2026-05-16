@@ -1,4 +1,4 @@
-import { type FC, useMemo } from "react";
+import { type FC, useMemo, useState, useEffect } from "react";
 import {
     DialogTitle,
     DialogContent,
@@ -36,6 +36,8 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
     const updateMutation = usePoolsUpdateMutation();
     const createMutation = usePoolsCreationMutation();
     const { t } = useTranslation();
+    const [servers, setServers] = useState<Array<{ id: number; name: string | null; address: string | null; port: number | null }>>([]);
+    const [serversLoading, setServersLoading] = useState(false);
 
     const defaultValue = useMemo(() => ({
         name: "",
@@ -44,6 +46,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
         category: "bridge" as const,
         routing_mode: "both" as const,
         bridge_naming_template: null as string | null,
+        preferred_bridge_server_id: null as number | null,
         is_active: true,
     }), []);
 
@@ -55,6 +58,20 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
         updateMutation,
         defaultValue,
     });
+
+    const category = form.watch("category");
+
+    useEffect(() => {
+        if (entity?.id && category === "bridge") {
+            setServersLoading(true);
+            fetchPoolServers(entity.id)
+                .then((data) => setServers(data))
+                .catch(() => setServers([]))
+                .finally(() => setServersLoading(false));
+        } else {
+            setServers([]);
+        }
+    }, [entity?.id, category]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange} defaultOpen={true}>
@@ -194,6 +211,43 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 </FormItem>
                             )}
                         />
+                        {category === "bridge" && (
+                            <FormField
+                                control={form.control}
+                                name="preferred_bridge_server_id"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>{t("page.proxy-pools.preferred_server")}</FormLabel>
+                                        <FormControl>
+                                            <Select
+                                                onValueChange={(val) => field.onChange(val === "null" ? null : Number(val))}
+                                                defaultValue={field.value?.toString() || "null"}
+                                                disabled={!entity || serversLoading}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={
+                                                        entity
+                                                            ? t("page.proxy-pools.preferred_server_placeholder")
+                                                            : t("page.proxy-pools.preferred_server_create_hint")
+                                                    } />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="null">
+                                                        {t("page.proxy-pools.preferred_server_auto")}
+                                                    </SelectItem>
+                                                    {servers.map((srv) => (
+                                                        <SelectItem key={srv.id} value={String(srv.id)}>
+                                                            {srv.name || `${srv.address}:${srv.port}`}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
                         <Button
                             className="mt-3 w-full font-semibold"
                             type="submit"

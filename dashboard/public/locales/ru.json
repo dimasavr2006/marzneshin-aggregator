@@ -128,6 +128,10 @@
     "proxy-pools": {
       "routing_mode": "Режим маршрутизации",
       "bridge_naming_template": "Шаблон именования бриджа",
+      "preferred_server": "Предпочитаемый сервер бриджа",
+      "preferred_server_placeholder": "Выберите предпочитаемый сервер",
+      "preferred_server_auto": "Авто (первый доступный)",
+      "preferred_server_create_hint": "Сохраните и синхронизируйте для выбора",
       "last_sync": "Последняя синхронизация",
       "fields": {
 	"url": "URL"

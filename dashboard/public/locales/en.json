@@ -106,6 +106,10 @@
       "title": "Proxy Pool",
       "routing_mode": "Routing Mode",
       "bridge_naming_template": "Bridge Naming Template",
+      "preferred_server": "Preferred Bridge Server",
+      "preferred_server_placeholder": "Select preferred server",
+      "preferred_server_auto": "Auto (first available)",
+      "preferred_server_create_hint": "Save and sync to select server",
       "last_sync": "Last Sync",
       "sync": {
         "action": "Sync",

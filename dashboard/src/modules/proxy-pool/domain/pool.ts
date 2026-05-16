@@ -12,6 +12,7 @@ export const PoolSchema = z.object({
     category: PoolCategorySchema,
     routing_mode: RoutingModeSchema,
     bridge_naming_template: z.string().nullable(),
+    preferred_bridge_server_id: z.number().nullable(),
     is_active: z.boolean(),
     last_sync_at: z.string().datetime().nullable(),
     created_at: z.string().datetime(),
@@ -42,6 +43,7 @@ export const PoolMutationSchema = z.object({
     category: PoolCategorySchema,
     routing_mode: RoutingModeSchema,
     bridge_naming_template: z.string().nullable().optional(),
+    preferred_bridge_server_id: z.number().nullable().optional(),
     is_active: z.boolean().default(true),
 });
 

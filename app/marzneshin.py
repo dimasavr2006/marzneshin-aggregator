@@ -136,6 +136,12 @@ def validation_exception_handler(
 
 async def main():
     if not DEBUG:
+        if not DASHBOARD_PATH or DASHBOARD_PATH == "/dashboard/":
+            logger.warning(
+                "DASHBOARD_PATH is not set or uses default value. "
+                "Dashboard will not be accessible at expected URL. "
+                "Set DASHBOARD_PATH in .env to fix this."
+            )
         app.mount(
             DASHBOARD_PATH,
             StaticFiles(directory="dashboard/dist", html=True),

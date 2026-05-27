@@ -8,8 +8,9 @@ DATA_DIR="/var/lib/$APP_NAME"
 NODE_DATA_DIR="/var/lib/$NODE_NAME"
 COMPOSE_FILE="$CONFIG_DIR/docker-compose.yml"
 
-FETCH_REPO="marzneshin/marzneshin"
-SCRIPT_URL="https://github.com/$FETCH_REPO/raw/master/script.sh"
+FETCH_REPO="${MARZNESHIN_FETCH_REPO:-dimasavr2006/marzneshin-aggregator}"
+MARZNESHIN_IMAGE="${MARZNESHIN_IMAGE:-dimasavr/marzneshin-aggregator}"
+SCRIPT_URL="https://raw.githubusercontent.com/$FETCH_REPO/main/script.sh"
 
 colorized_echo() {
     local color=$1
@@ -126,8 +127,8 @@ install_marzneshin_script() {
 
 install_marzneshin() {
     # Fetch releases
-    FILES_URL_PREFIX="https://raw.githubusercontent.com/marzneshin/marzneshin/master"
-	COMPOSE_FILES_URL="https://raw.githubusercontent.com/marzneshin/marzneshin-deploy/master"
+    FILES_URL_PREFIX="https://raw.githubusercontent.com/$FETCH_REPO/main"
+	COMPOSE_FILES_URL="$FILES_URL_PREFIX"
  	database=$1
    	nightly=$2
    	local_install=$3
@@ -159,10 +160,11 @@ install_marzneshin() {
     else
         colorized_echo blue "Fetching compose file"
         curl -sL "$COMPOSE_FILES_URL/docker-compose-$database.yml" -o "$CONFIG_DIR/docker-compose.yml"
+        sed -ri "s|(^[[:space:]]*image:[[:space:]]*)dawsh/marzneshin:[^[:space:]]+|\1${MARZNESHIN_IMAGE}:latest|" "$CONFIG_DIR/docker-compose.yml"
         colorized_echo green "File saved in $CONFIG_DIR/docker-compose.yml"
     	if [ "$nightly" = true ]; then
     	    colorized_echo red "setting compose tag to nightly."
-    	 	sed -ri "s/(dawsh\/marzneshin:)latest/\1nightly/g" $CONFIG_DIR/docker-compose.yml
+	 	sed -ri "s|(^[[:space:]]*image:[[:space:]]*)${MARZNESHIN_IMAGE}:latest|\1${MARZNESHIN_IMAGE}:nightly|" "$CONFIG_DIR/docker-compose.yml"
     	fi
      
         colorized_echo blue "Fetching example .env file"

@@ -20,8 +20,6 @@ on:
     branches: [ "master" ]
     paths:
       - 'dashboard/**'
-  schedule:
-    - cron: '40 13 * * 2'
 
 jobs:
   analyze:

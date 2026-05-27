@@ -22,7 +22,7 @@ COPY . /app
 
 RUN apt-get update -y \
     && apt-get install make git gcc g++ python3-dev -y --no-install-recommends \
-    && pip install --no-cache-dir -r /app/requirements.txt \  
+    && pip install --no-cache-dir -r /app/requirements.txt \
     && apt-get clean -y \
     && apt-get remove g++ gcc python3-dev -y \
     && rm -rf /var/lib/apt/lists/* 

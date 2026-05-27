@@ -16,7 +16,7 @@ on:
       git-ref:
         description: "Release Git Ref (Which branch or tag to build?)"
         required: true
-        default: "master"
+        default: "main"
 
       is-draft:
         description: 'Draft Release? (Beta only, Nightly will always be a non-draft)'
@@ -28,14 +28,15 @@ on:
         type: boolean
         required: true
         default: true
-  schedule:
-    - cron: "0 3 * * *"
 
 jobs:
   build-docker-image:
     runs-on: ubuntu-latest
     env:
       VITE_BASE_API: /api/
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || secrets.DOCKER_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_PASSWORD }}
+      DOCKER_IMAGE: dimasavr/marzneshin-aggregator
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,34 +72,43 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
 
       - name: Build and push
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            dawsh/marzneshin:latest
-            dawsh/marzneshin:${{github.ref_name}}
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.ref_name }}
 
       - name: Nightly build and push for docker
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.build-target == 'nightly'}}
+        if: ${{ github.event.inputs.build-target == 'nightly' && env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            dawsh/marzneshin:nightly
+            ${{ env.DOCKER_IMAGE }}:nightly
+
+      - name: Build only when Docker credentials are missing
+        if: ${{ env.DOCKERHUB_USERNAME == '' || env.DOCKERHUB_TOKEN == '' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
 
       - name: Update Nightly Release
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.build-target == 'nightly'}}
+        if: ${{ github.event.inputs.build-target == 'nightly' && env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: andelf/nightly-release@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

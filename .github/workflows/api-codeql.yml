@@ -9,8 +9,6 @@ on:
     branches: [ "master" ]
     paths-ignore:
       - 'dashboard/**'
-  schedule:
-    - cron: '40 13 * * 2'
 
 jobs:
   analyze:

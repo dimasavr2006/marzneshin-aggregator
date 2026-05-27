@@ -6,6 +6,7 @@ on:
 
 jobs:
   notify-telegram:
+    if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
     runs-on: ubuntu-latest
 
     steps:

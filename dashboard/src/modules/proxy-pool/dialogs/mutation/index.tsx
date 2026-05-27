@@ -45,7 +45,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
         url: "",
         type: "vless" as const,
         category: "bridge" as const,
-        routing_mode: "both" as const,
+        routing_mode: "via_node" as const,
         bridge_naming_template: null as string | null,
         preferred_bridge_server_id: null as number | null,
         bridge_subscription_id: null as number | null,
@@ -63,6 +63,12 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
 
     const category = form.watch("category");
     const routingMode = form.watch("routing_mode");
+
+    useEffect(() => {
+        if (category === "bridge" && routingMode !== "via_node") {
+            form.setValue("routing_mode", "via_node", { shouldValidate: true });
+        }
+    }, [category, routingMode, form]);
 
     useEffect(() => {
         if (entity?.id && category === "bridge") {
@@ -182,9 +188,15 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="direct">{t("routing_mode.direct")}</SelectItem>
-                                                <SelectItem value="via_node">{t("routing_mode.via_node")}</SelectItem>
-                                                <SelectItem value="both">{t("routing_mode.both")}</SelectItem>
+                                                {category === "bridge" ? (
+                                                    <SelectItem value="via_node">{t("routing_mode.via_node")}</SelectItem>
+                                                ) : (
+                                                    <>
+                                                        <SelectItem value="direct">{t("routing_mode.direct")}</SelectItem>
+                                                        <SelectItem value="via_node">{t("routing_mode.via_node")}</SelectItem>
+                                                        <SelectItem value="both">{t("routing_mode.both")}</SelectItem>
+                                                    </>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

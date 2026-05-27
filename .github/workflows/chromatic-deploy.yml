@@ -35,6 +35,6 @@ jobs:
   chromatic:
     name: Visual tests
     needs: [ changed-files ]
-    if: ${{ needs.changed-files.outputs.any_changed == 'true' }}
+    if: ${{ needs.changed-files.outputs.any_changed == 'true' && secrets.CHROMATIC_PROJECT_TOKEN != '' }}
     uses: ./.github/workflows/chromatic.yml
     secrets: inherit

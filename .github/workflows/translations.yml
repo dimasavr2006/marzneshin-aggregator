@@ -3,8 +3,15 @@ name: Run Script on Locale Files
 on:
   push:
     branches:
-      - '*'
+      - master
+      - main
+    paths:
+      - 'dashboard/public/locales/*.json'
+      - 'tools/check_translations.sh'
   pull_request:
+    paths:
+      - 'dashboard/public/locales/*.json'
+      - 'tools/check_translations.sh'
 
 jobs:
   find-locales:

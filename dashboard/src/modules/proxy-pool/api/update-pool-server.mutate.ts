@@ -1,6 +1,6 @@
-import { PoolsQueryFetchKey } from "@marzneshin/modules/proxy-pool";
+import { invalidatePoolsQueries } from "@marzneshin/modules/proxy-pool";
 import { useMutation } from "@tanstack/react-query";
-import { fetch, queryClient } from "@marzneshin/common/utils";
+import { fetch } from "@marzneshin/common/utils";
 import { toast } from "sonner";
 import i18n from "@marzneshin/features/i18n";
 
@@ -17,7 +17,7 @@ export const usePoolServerUpdateMutation = () => {
         },
         onSuccess: () => {
             toast.success(i18n.t('events.update.success.title', { name: 'Server' }));
-            queryClient.invalidateQueries({ queryKey: [PoolsQueryFetchKey] });
+            invalidatePoolsQueries();
         },
     });
 };

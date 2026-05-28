@@ -371,29 +371,37 @@ def proxy_pool_server_to_v2data(
     naming_context = naming_context or {}
     server_name = srv.name or naming_context.get("server_name", "Bridge")
     sub_name = sub.name if sub else naming_context.get("sub_name", "Proxy")
+    is_bridge_sub = bool(sub and sub.category == "bridge")
+    format_kwargs = {
+        "server_name": server_name,
+        "sub_name": sub_name,
+        "protocol": srv.protocol or "vless",
+        "address": srv.address,
+        "port": srv.port,
+    }
 
     # Determine bridge naming
     if srv.bridge_naming_override:
-        remark = srv.bridge_naming_override.format(
-            server_name=server_name,
-            sub_name=sub_name,
-            protocol=srv.protocol or "vless",
-            address=srv.address,
-            port=srv.port,
-        )
+        try:
+            remark = srv.bridge_naming_override.format(**format_kwargs)
+        except Exception:
+            remark = server_name or f"{srv.address}:{srv.port}"
     elif sub and sub.bridge_naming_template:
-        remark = sub.bridge_naming_template.format(
-            server_name=server_name,
-            sub_name=sub_name,
-            protocol=srv.protocol or "vless",
-            address=srv.address,
-            port=srv.port,
-        )
+        try:
+            remark = sub.bridge_naming_template.format(**format_kwargs)
+        except Exception:
+            remark = server_name or f"{srv.address}:{srv.port}"
     else:
-        if server_name and server_name != "Bridge":
+        if is_bridge_sub and server_name and server_name != "Bridge":
             remark = f"Bridge ({server_name})"
-        else:
+        elif is_bridge_sub:
             remark = "Bridge"
+        elif server_name and server_name != "Bridge":
+            remark = server_name
+        elif sub_name:
+            remark = f"{sub_name} ({srv.address}:{srv.port})"
+        else:
+            remark = f"{srv.address}:{srv.port}"
 
     data = V2Data(
         protocol=srv.protocol or "vless",
@@ -413,6 +421,38 @@ def proxy_pool_server_to_v2data(
         flow=srv.flow,
     )
     return data
+
+
+def _pick_subscription_servers(
+    sub: ExternalSubscription,
+    servers: list[ProxyPoolServer],
+) -> list[ProxyPoolServer]:
+    mode = (sub.server_selection_mode or "all").lower()
+    if mode == "manual":
+        if sub.preferred_bridge_server_id:
+            preferred = next(
+                (
+                    srv for srv in servers
+                    if srv.id == sub.preferred_bridge_server_id
+                ),
+                None,
+            )
+            if preferred:
+                return [preferred]
+        return servers[:1] if servers else []
+
+    if mode == "selected":
+        selected_ids: set[int] = set()
+        for raw_id in sub.selected_server_ids or []:
+            if isinstance(raw_id, int) and raw_id > 0:
+                selected_ids.add(raw_id)
+        selected_servers = [
+            srv for srv in servers if srv.id in selected_ids
+        ]
+        # Fallback: if selected IDs are no longer present, use all servers.
+        return selected_servers or servers
+
+    return servers
 
 
 def get_proxy_pool_configs(
@@ -444,7 +484,7 @@ def get_proxy_pool_configs(
             )
             # Sort available servers first
             servers.sort(key=lambda s: not s.is_available)
-            for srv in servers:
+            for srv in _pick_subscription_servers(sub, servers):
                 bridge_servers.append((srv, sub))
 
         if chaining_support:
@@ -491,7 +531,7 @@ def get_proxy_pool_configs(
             )
             # Sort available servers first
             servers.sort(key=lambda s: not s.is_available)
-            for srv in servers:
+            for srv in _pick_subscription_servers(sub, servers):
                 data = proxy_pool_server_to_v2data(srv, sub)
                 if data:
                     if chaining_support and sub.routing_mode == "via_node" and bridge_servers:

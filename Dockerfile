@@ -2,6 +2,7 @@ FROM node:20-slim AS frontend-build
 
 WORKDIR /app
 
+ARG CACHE_BUST=1
 COPY . .
 
 RUN apt-get update && apt-get install make git -y
@@ -16,9 +17,9 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-COPY --from=frontend-build /app/dashboard/dist /app/dashboard/dist
-
 COPY . /app
+
+COPY --from=frontend-build /app/dashboard/dist /app/dashboard/dist
 
 RUN apt-get update -y \
     && apt-get install make git gcc g++ python3-dev -y --no-install-recommends \

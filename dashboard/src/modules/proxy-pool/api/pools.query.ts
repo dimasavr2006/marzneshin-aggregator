@@ -1,6 +1,6 @@
 import type { Pool } from "@marzneshin/modules/proxy-pool";
 import { useQuery } from "@tanstack/react-query";
-import { fetch } from "@marzneshin/common/utils";
+import { fetch, queryClient } from "@marzneshin/common/utils";
 import type {
     EntityQueryKeyType,
     UseEntityQueryProps,
@@ -33,6 +33,14 @@ export async function fetchPools({
 }
 
 export const PoolsQueryFetchKey = "proxy-pools";
+
+const isProxyPoolQueryKey = (value: unknown): value is string =>
+    typeof value === "string" && value.startsWith(PoolsQueryFetchKey);
+
+export const invalidatePoolsQueries = () =>
+    queryClient.invalidateQueries({
+        predicate: (query) => isProxyPoolQueryKey(query.queryKey[0]),
+    });
 
 export const usePoolsQuery = ({
     page, size, sortBy = "created_at", desc = false, filters = {}

@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -78,9 +80,121 @@ def _validate_preferred_server(
         )
 
 
+def _normalize_selected_server_ids(
+    selected_server_ids: list[int] | None,
+) -> list[int]:
+    if not selected_server_ids:
+        return []
+    normalized: list[int] = []
+    for server_id in selected_server_ids:
+        if server_id <= 0:
+            continue
+        if server_id not in normalized:
+            normalized.append(server_id)
+    return normalized
+
+
+def _server_fingerprint(data: dict) -> tuple:
+    return (
+        data.get("protocol"),
+        data.get("address"),
+        data.get("port"),
+        data.get("uuid"),
+        data.get("password"),
+        data.get("network"),
+        data.get("tls"),
+        data.get("sni"),
+        data.get("host"),
+        data.get("path"),
+        data.get("pbk"),
+        data.get("sid"),
+        data.get("flow"),
+    )
+
+
+def _restore_server_selections(
+    sub: ExternalSubscription,
+    previous_servers: list,
+    created_servers: list,
+):
+    previous_fingerprints = {
+        srv.id: _server_fingerprint(
+            {
+                "protocol": srv.protocol,
+                "address": srv.address,
+                "port": srv.port,
+                "uuid": srv.uuid,
+                "password": srv.password,
+                "network": srv.network,
+                "tls": srv.tls,
+                "sni": srv.sni,
+                "host": srv.host,
+                "path": srv.path,
+                "pbk": srv.pbk,
+                "sid": srv.sid,
+                "flow": srv.flow,
+            }
+        )
+        for srv in previous_servers
+    }
+
+    created_by_fingerprint: dict[tuple, list[int]] = defaultdict(list)
+    for srv in created_servers:
+        created_by_fingerprint[
+            _server_fingerprint(
+                {
+                    "protocol": srv.protocol,
+                    "address": srv.address,
+                    "port": srv.port,
+                    "uuid": srv.uuid,
+                    "password": srv.password,
+                    "network": srv.network,
+                    "tls": srv.tls,
+                    "sni": srv.sni,
+                    "host": srv.host,
+                    "path": srv.path,
+                    "pbk": srv.pbk,
+                    "sid": srv.sid,
+                    "flow": srv.flow,
+                }
+            )
+        ].append(srv.id)
+
+    previous_preferred = sub.preferred_bridge_server_id
+    if previous_preferred:
+        preferred_fingerprint = previous_fingerprints.get(previous_preferred)
+        if preferred_fingerprint and created_by_fingerprint.get(preferred_fingerprint):
+            sub.preferred_bridge_server_id = created_by_fingerprint[
+                preferred_fingerprint
+            ][0]
+        else:
+            sub.preferred_bridge_server_id = None
+
+    previous_selected_ids = _normalize_selected_server_ids(sub.selected_server_ids)
+    remapped_selected_ids: list[int] = []
+    for previous_id in previous_selected_ids:
+        selected_fingerprint = previous_fingerprints.get(previous_id)
+        if not selected_fingerprint:
+            continue
+        new_ids = created_by_fingerprint.get(selected_fingerprint, [])
+        if not new_ids:
+            continue
+        mapped_id = new_ids.pop(0)
+        if mapped_id not in remapped_selected_ids:
+            remapped_selected_ids.append(mapped_id)
+    sub.selected_server_ids = remapped_selected_ids
+
+
 def _sync_subscription_data(db: Session, sub: ExternalSubscription):
     """Fetch and parse subscription URL, update servers."""
+    previous_servers = crud.get_proxy_pool_servers(db, subscription_id=sub.id)
     crud.remove_proxy_pool_servers(db, sub.id)
+    for previous_server in previous_servers:
+        try:
+            db.expunge(previous_server)
+        except Exception:
+            pass
+    created_servers = []
 
     if sub.type in ("vless", "vmess", "trojan") and (
         sub.url.startswith("vless://")
@@ -89,11 +203,13 @@ def _sync_subscription_data(db: Session, sub: ExternalSubscription):
     ):
         try:
             parsed = parse_single_link(sub.url)
-            crud.create_proxy_pool_server(
+            created_servers.append(
+                crud.create_proxy_pool_server(
                 db=db,
                 subscription_id=sub.id,
                 **{k: v for k, v in parsed.items() if k != "name"},
                 name=parsed.get("name") or sub.name,
+                )
             )
         except ValueError as exc:
             raise HTTPException(
@@ -111,11 +227,13 @@ def _sync_subscription_data(db: Session, sub: ExternalSubscription):
             resp.raise_for_status()
             servers = parse_subscription(resp.text)
             for srv in servers:
-                crud.create_proxy_pool_server(
+                created_servers.append(
+                    crud.create_proxy_pool_server(
                     db=db,
                     subscription_id=sub.id,
                     **{k: v for k, v in srv.items() if k != "name"},
                     name=srv.get("name") or sub.name,
+                    )
                 )
         except requests.exceptions.Timeout:
             raise HTTPException(
@@ -143,6 +261,7 @@ def _sync_subscription_data(db: Session, sub: ExternalSubscription):
                 detail=f"Failed to sync subscription: {exc}",
             )
 
+    _restore_server_selections(sub, previous_servers, created_servers)
     from datetime import datetime
     sub.last_sync_at = datetime.utcnow()
     db.commit()
@@ -155,11 +274,17 @@ def add_subscription(
     db: DBDep,
     admin: AdminDep,
 ):
-    if payload.category == "bridge" and payload.routing_mode != "via_node":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bridge subscriptions must use routing_mode='via_node'",
-        )
+    routing_mode = payload.routing_mode
+    server_selection_mode = payload.server_selection_mode
+    selected_server_ids = _normalize_selected_server_ids(
+        payload.selected_server_ids
+    )
+    if payload.category == "bridge":
+        routing_mode = "via_node"
+        server_selection_mode = "all"
+        selected_server_ids = []
+    elif server_selection_mode not in ("all", "manual", "selected"):
+        server_selection_mode = "all"
 
     db_admin = crud.get_admin(db, admin.username)
     sub = crud.create_external_subscription(
@@ -169,10 +294,12 @@ def add_subscription(
         url=payload.url,
         type=payload.type,
         category=payload.category,
-        routing_mode=payload.routing_mode,
+        routing_mode=routing_mode,
         bridge_naming_template=payload.bridge_naming_template,
         preferred_bridge_server_id=payload.preferred_bridge_server_id,
         bridge_subscription_id=payload.bridge_subscription_id,
+        server_selection_mode=server_selection_mode,
+        selected_server_ids=selected_server_ids,
         is_active=payload.is_active,
     )
 
@@ -299,11 +426,28 @@ def modify_subscription(
     # Validate routing_mode for bridge category
     category = update_data.get("category") or sub.category
     routing_mode = update_data.get("routing_mode") or sub.routing_mode
-    if category == "bridge" and routing_mode != "via_node":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bridge subscriptions must use routing_mode='via_node'",
+    selection_mode = (
+        update_data.get("server_selection_mode")
+        or sub.server_selection_mode
+        or "all"
+    )
+    if category == "bridge":
+        selection_mode = "all"
+        update_data["server_selection_mode"] = "all"
+        update_data["selected_server_ids"] = []
+    elif selection_mode not in ("all", "manual", "selected"):
+        selection_mode = "all"
+        update_data["server_selection_mode"] = "all"
+
+    if "selected_server_ids" in update_data:
+        update_data["selected_server_ids"] = _normalize_selected_server_ids(
+            update_data.get("selected_server_ids")
         )
+    if selection_mode != "selected":
+        update_data["selected_server_ids"] = []
+
+    if category == "bridge" and routing_mode != "via_node":
+        update_data["routing_mode"] = "via_node"
 
     sub = crud.update_external_subscription(db, sub, **update_data)
 

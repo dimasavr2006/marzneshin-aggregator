@@ -13,6 +13,8 @@ class ExternalSubscriptionCreate(BaseModel):
     bridge_naming_template: str | None = None
     preferred_bridge_server_id: int | None = None
     bridge_subscription_id: int | None = None
+    server_selection_mode: Literal["all", "manual", "selected"] = "all"
+    selected_server_ids: list[int] | None = None
     is_active: bool = True
 
 
@@ -25,6 +27,8 @@ class ExternalSubscriptionModify(BaseModel):
     bridge_naming_template: str | None = None
     preferred_bridge_server_id: int | None = None
     bridge_subscription_id: int | None = None
+    server_selection_mode: Literal["all", "manual", "selected"] | None = None
+    selected_server_ids: list[int] | None = None
     is_active: bool | None = None
 
 
@@ -38,6 +42,8 @@ class ExternalSubscriptionResponse(BaseModel):
     bridge_naming_template: str | None
     preferred_bridge_server_id: int | None
     bridge_subscription_id: int | None
+    server_selection_mode: str
+    selected_server_ids: list[int] | None
     admin_id: int | None
     is_active: bool
     server_count: int = 0

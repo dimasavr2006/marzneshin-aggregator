@@ -38,14 +38,21 @@ export function DataTableActionsCell<TData>({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t('actions')}</DropdownMenuLabel>
-                <DropdownMenuItem data-testid="action-row-open" onClick={() => { onOpen(row.original) }}>
+                <DropdownMenuItem
+                    data-testid="action-row-open"
+                    onSelect={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onOpen(row.original);
+                    }}
+                >
                     <OpenInNewWindowIcon className="mr-1 w-4 h-4" /> {t('open')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem data-testid="action-row-edit" onClick={(e) => { e.stopPropagation(); onEdit(row.original) }}>
+                <DropdownMenuItem data-testid="action-row-edit" onSelect={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(row.original) }}>
                     <PencilIcon className="mr-1 w-4 h-4" />    {t('edit')}
                 </DropdownMenuItem>
-                <DropdownMenuItem data-testid="action-row-delete" onClick={(e) => { e.stopPropagation(); onDelete(row.original) }} className="text-destructive">
+                <DropdownMenuItem data-testid="action-row-delete" onSelect={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(row.original) }} className="text-destructive">
                     <TrashIcon className="mr-1 w-4 h-4" />{t('delete')}
                 </DropdownMenuItem>
             </DropdownMenuContent>

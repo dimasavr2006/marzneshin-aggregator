@@ -3,6 +3,7 @@ export * from "./pool.query";
 export * from "./pool-servers.query";
 export * from "./create-pool.mutate";
 export * from "./update-pool.mutate";
+export * from "./toggle-pool-active.mutate";
 export * from "./update-pool-server.mutate";
 export * from "./delete-pool.mutate";
 export * from "./sync-pool.mutate";

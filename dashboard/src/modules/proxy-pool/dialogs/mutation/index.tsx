@@ -19,6 +19,7 @@ import {
     SelectValue,
     Switch,
     HStack,
+    Checkbox,
 } from "@marzneshin/common/components";
 import { useTranslation } from "react-i18next";
 import {
@@ -29,6 +30,13 @@ import {
 import type { Pool } from "../..";
 import { useMutationDialog, MutationDialogProps } from "@marzneshin/common/hooks";
 
+type PoolServerOption = {
+    id: number;
+    name: string | null;
+    address: string | null;
+    port: number | null;
+};
+
 export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
     entity,
     onClose,
@@ -36,7 +44,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
     const updateMutation = usePoolsUpdateMutation();
     const createMutation = usePoolsCreationMutation();
     const { t } = useTranslation();
-    const [servers, setServers] = useState<Array<{ id: number; name: string | null; address: string | null; port: number | null }>>([]);
+    const [servers, setServers] = useState<PoolServerOption[]>([]);
     const [serversLoading, setServersLoading] = useState(false);
     const [bridgeSubs, setBridgeSubs] = useState<Pool[]>([]);
 
@@ -49,6 +57,8 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
         bridge_naming_template: null as string | null,
         preferred_bridge_server_id: null as number | null,
         bridge_subscription_id: null as number | null,
+        server_selection_mode: "all" as const,
+        selected_server_ids: [] as number[],
         is_active: true,
     }), []);
 
@@ -62,26 +72,66 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
     });
 
     const category = form.watch("category");
+    const type = form.watch("type");
     const routingMode = form.watch("routing_mode");
+    const selectionMode = form.watch("server_selection_mode");
+    const selectedServerIds = form.watch("selected_server_ids") || [];
+
+    const isExternalSubscription =
+        category === "external" && type === "subscription";
 
     useEffect(() => {
-        if (category === "bridge" && routingMode !== "via_node") {
-            form.setValue("routing_mode", "via_node", { shouldValidate: true });
+        if (category === "bridge") {
+            if (routingMode !== "via_node") {
+                form.setValue("routing_mode", "via_node", { shouldValidate: true });
+            }
+            if (selectionMode !== "all") {
+                form.setValue("server_selection_mode", "all", { shouldValidate: true });
+            }
+            if ((selectedServerIds || []).length > 0) {
+                form.setValue("selected_server_ids", [], { shouldValidate: true });
+            }
         }
-    }, [category, routingMode, form]);
+    }, [category, routingMode, selectionMode, selectedServerIds, form]);
 
     useEffect(() => {
-        if (entity?.id && category === "bridge") {
-            setServersLoading(true);
-            import("@marzneshin/modules/proxy-pool")
-                .then(({ fetchPoolServers }) => fetchPoolServers(entity.id))
-                .then((data: Array<{ id: number; name: string | null; address: string | null; port: number | null }>) => setServers(data))
-                .catch(() => setServers([]))
-                .finally(() => setServersLoading(false));
-        } else {
+        if (selectionMode !== "selected" && (selectedServerIds || []).length > 0) {
+            form.setValue("selected_server_ids", [], { shouldValidate: true });
+        }
+    }, [selectionMode, selectedServerIds, form]);
+
+    useEffect(() => {
+        if (!entity?.id) {
             setServers([]);
+            return;
         }
+
+        if (category !== "bridge" && category !== "external") {
+            setServers([]);
+            return;
+        }
+
+        setServersLoading(true);
+        import("@marzneshin/modules/proxy-pool")
+            .then(({ fetchPoolServers }) => fetchPoolServers(entity.id))
+            .then((data: PoolServerOption[]) => setServers(data))
+            .catch(() => setServers([]))
+            .finally(() => setServersLoading(false));
     }, [entity?.id, category]);
+
+    useEffect(() => {
+        const serverIds = new Set(servers.map((srv) => srv.id));
+        const preferred = form.getValues("preferred_bridge_server_id");
+        if (preferred !== null && preferred !== undefined && !serverIds.has(preferred)) {
+            form.setValue("preferred_bridge_server_id", null, { shouldValidate: true });
+        }
+        if ((selectedServerIds || []).length > 0) {
+            const normalized = selectedServerIds.filter((id: number) => serverIds.has(id));
+            if (normalized.length !== selectedServerIds.length) {
+                form.setValue("selected_server_ids", normalized, { shouldValidate: true });
+            }
+        }
+    }, [servers, selectedServerIds, form]);
 
     useEffect(() => {
         import("@marzneshin/common/utils")
@@ -92,7 +142,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange} defaultOpen={true}>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-primary">
                         {entity
@@ -101,7 +151,7 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                     </DialogTitle>
                 </DialogHeader>
                 <Form {...form}>
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit} className="space-y-3">
                         <FormField
                             control={form.control}
                             name="name"
@@ -135,7 +185,10 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 render={({ field }) => (
                                     <FormItem className="w-1/2">
                                         <FormLabel>{t("type")}</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                        >
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue />
@@ -158,7 +211,10 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 render={({ field }) => (
                                     <FormItem className="w-1/2">
                                         <FormLabel>{t("category")}</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                        >
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue />
@@ -181,7 +237,10 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 render={({ field }) => (
                                     <FormItem className="w-1/2">
                                         <FormLabel>{t("page.proxy-pools.routing_mode")}</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                        >
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue />
@@ -207,10 +266,8 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 control={form.control}
                                 name="is_active"
                                 render={({ field }) => (
-                                    <FormItem className="w-1/2 flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                        <div className="space-y-0.5">
-                                            <FormLabel>{t("active")}</FormLabel>
-                                        </div>
+                                    <FormItem className="w-1/2 flex flex-row items-center justify-between rounded-md border px-3 py-2">
+                                        <FormLabel>{t("active")}</FormLabel>
                                         <FormControl>
                                             <Switch
                                                 checked={field.value}
@@ -221,19 +278,36 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 )}
                             />
                         </HStack>
+
                         <FormField
                             control={form.control}
                             name="bridge_naming_template"
                             render={({ field }) => (
                                 <FormItem className="w-full">
-                                    <FormLabel>{t("page.proxy-pools.bridge_naming_template")}</FormLabel>
+                                    <FormLabel>
+                                        {category === "external"
+                                            ? t("page.proxy-pools.name_template")
+                                            : t("page.proxy-pools.bridge_naming_template")}
+                                    </FormLabel>
                                     <FormControl>
-                                        <Input {...field} value={field.value || ""} placeholder="Bridge ({server_name})" />
+                                        <Input
+                                            {...field}
+                                            value={field.value || ""}
+                                            placeholder={
+                                                category === "external"
+                                                    ? "{sub_name} | {server_name}"
+                                                    : "Bridge ({server_name})"
+                                            }
+                                        />
                                     </FormControl>
+                                    <p className="text-xs text-muted-foreground">
+                                        {t("page.proxy-pools.name_template_hint")}
+                                    </p>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+
                         {category === "bridge" && (
                             <FormField
                                 control={form.control}
@@ -243,16 +317,18 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                         <FormLabel>{t("page.proxy-pools.preferred_server")}</FormLabel>
                                         <FormControl>
                                             <Select
+                                                value={field.value?.toString() || "null"}
                                                 onValueChange={(val) => field.onChange(val === "null" ? null : Number(val))}
-                                                defaultValue={field.value?.toString() || "null"}
                                                 disabled={!entity || serversLoading}
                                             >
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder={
-                                                        entity
-                                                            ? t("page.proxy-pools.preferred_server_placeholder")
-                                                            : t("page.proxy-pools.preferred_server_create_hint")
-                                                    } />
+                                                    <SelectValue
+                                                        placeholder={
+                                                            entity
+                                                                ? t("page.proxy-pools.preferred_server_placeholder")
+                                                                : t("page.proxy-pools.preferred_server_create_hint")
+                                                        }
+                                                    />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="null">
@@ -271,6 +347,144 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 )}
                             />
                         )}
+
+                        {isExternalSubscription && (
+                            <>
+                                <FormField
+                                    control={form.control}
+                                    name="server_selection_mode"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <FormLabel>{t("page.proxy-pools.selection_mode")}</FormLabel>
+                                            <FormControl>
+                                                <Select
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">
+                                                            {t("page.proxy-pools.selection_mode.all")}
+                                                        </SelectItem>
+                                                        <SelectItem value="manual">
+                                                            {t("page.proxy-pools.selection_mode.manual")}
+                                                        </SelectItem>
+                                                        <SelectItem value="selected">
+                                                            {t("page.proxy-pools.selection_mode.selected")}
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {selectionMode === "manual" && (
+                                    <FormField
+                                        control={form.control}
+                                        name="preferred_bridge_server_id"
+                                        render={({ field }) => (
+                                            <FormItem className="w-full">
+                                                <FormLabel>{t("page.proxy-pools.manual_server")}</FormLabel>
+                                                <FormControl>
+                                                    <Select
+                                                        value={field.value?.toString() || "null"}
+                                                        onValueChange={(val) =>
+                                                            field.onChange(val === "null" ? null : Number(val))
+                                                        }
+                                                        disabled={!entity || serversLoading}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue
+                                                                placeholder={
+                                                                    entity
+                                                                        ? t("page.proxy-pools.manual_server_placeholder")
+                                                                        : t("page.proxy-pools.selected_servers_create_hint")
+                                                                }
+                                                            />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="null">
+                                                                {t("page.proxy-pools.manual_server_auto")}
+                                                            </SelectItem>
+                                                            {servers.map((srv) => (
+                                                                <SelectItem key={srv.id} value={String(srv.id)}>
+                                                                    {srv.name || `${srv.address}:${srv.port}`}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {selectionMode === "selected" && (
+                                    <FormField
+                                        control={form.control}
+                                        name="selected_server_ids"
+                                        render={({ field }) => (
+                                            <FormItem className="w-full">
+                                                <FormLabel>{t("page.proxy-pools.selected_servers")}</FormLabel>
+                                                <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+                                                    {serversLoading ? (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {t("loading")}
+                                                        </p>
+                                                    ) : !entity ? (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {t("page.proxy-pools.selected_servers_create_hint")}
+                                                        </p>
+                                                    ) : servers.length === 0 ? (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {t("page.proxy-pools.no_servers")}
+                                                        </p>
+                                                    ) : (
+                                                        servers.map((srv) => {
+                                                            const value = Array.isArray(field.value)
+                                                                ? field.value
+                                                                : [];
+                                                            const checked = value.includes(srv.id);
+                                                            const label = srv.name || `${srv.address}:${srv.port}`;
+                                                            return (
+                                                                <label
+                                                                    key={srv.id}
+                                                                    className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted/40"
+                                                                >
+                                                                    <Checkbox
+                                                                        checked={checked}
+                                                                        onCheckedChange={(state) => {
+                                                                            const current = Array.isArray(field.value)
+                                                                                ? field.value
+                                                                                : [];
+                                                                            const next = state === true
+                                                                                ? [...current, srv.id]
+                                                                                : current.filter((id) => id !== srv.id);
+                                                                            field.onChange(next);
+                                                                        }}
+                                                                    />
+                                                                    <span>{label}</span>
+                                                                </label>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {t("page.proxy-pools.selected_servers_hint")}
+                                                </p>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+                            </>
+                        )}
+
                         {category === "external" && routingMode === "via_node" && (
                             <FormField
                                 control={form.control}
@@ -280,8 +494,8 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                         <FormLabel>{t("page.proxy-pools.bridge_subscription")}</FormLabel>
                                         <FormControl>
                                             <Select
+                                                value={field.value?.toString() || "null"}
                                                 onValueChange={(val) => field.onChange(val === "null" ? null : Number(val))}
-                                                defaultValue={field.value?.toString() || "null"}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={t("page.proxy-pools.bridge_subscription_placeholder")} />
@@ -303,8 +517,9 @@ export const MutationDialog: FC<MutationDialogProps<Pool>> = ({
                                 )}
                             />
                         )}
+
                         <Button
-                            className="mt-3 w-full font-semibold"
+                            className="mt-1 w-full font-semibold"
                             type="submit"
                             disabled={form.formState.isSubmitting}
                         >

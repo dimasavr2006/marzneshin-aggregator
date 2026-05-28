@@ -3,6 +3,7 @@ import { z } from "zod";
 export const PoolTypeSchema = z.enum(["vless", "vmess", "trojan", "subscription"]);
 export const PoolCategorySchema = z.enum(["bridge", "external"]);
 export const RoutingModeSchema = z.enum(["direct", "via_node", "both"]);
+export const ServerSelectionModeSchema = z.enum(["all", "manual", "selected"]);
 
 export const PoolSchema = z.object({
     id: z.number(),
@@ -14,6 +15,8 @@ export const PoolSchema = z.object({
     bridge_naming_template: z.string().nullable(),
     preferred_bridge_server_id: z.number().nullable(),
     bridge_subscription_id: z.number().nullable(),
+    server_selection_mode: ServerSelectionModeSchema.default("all"),
+    selected_server_ids: z.array(z.number()).nullable().default([]),
     is_active: z.boolean(),
     server_count: z.number().default(0),
     last_sync_at: z.string().datetime().nullable(),
@@ -48,12 +51,15 @@ export const PoolMutationSchema = z.object({
     bridge_naming_template: z.string().nullable().optional(),
     preferred_bridge_server_id: z.number().nullable().optional(),
     bridge_subscription_id: z.number().nullable().optional(),
+    server_selection_mode: ServerSelectionModeSchema.default("all"),
+    selected_server_ids: z.array(z.number()).nullable().optional(),
     is_active: z.boolean().default(true),
 });
 
 export type PoolType = z.infer<typeof PoolTypeSchema>;
 export type PoolCategory = z.infer<typeof PoolCategorySchema>;
 export type RoutingMode = z.infer<typeof RoutingModeSchema>;
+export type ServerSelectionMode = z.infer<typeof ServerSelectionModeSchema>;
 export type Pool = z.infer<typeof PoolSchema>;
 export type PoolServer = z.infer<typeof PoolServerSchema>;
 export type PoolMutationType = z.infer<typeof PoolMutationSchema>;

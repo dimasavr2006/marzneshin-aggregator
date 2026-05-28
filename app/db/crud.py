@@ -1055,6 +1055,8 @@ def create_external_subscription(
     bridge_naming_template: str | None = None,
     preferred_bridge_server_id: int | None = None,
     bridge_subscription_id: int | None = None,
+    server_selection_mode: str = "all",
+    selected_server_ids: list[int] | None = None,
     is_active: bool = True,
 ) -> ExternalSubscription:
     sub = ExternalSubscription(
@@ -1067,6 +1069,8 @@ def create_external_subscription(
         bridge_naming_template=bridge_naming_template,
         preferred_bridge_server_id=preferred_bridge_server_id,
         bridge_subscription_id=bridge_subscription_id,
+        server_selection_mode=server_selection_mode,
+        selected_server_ids=selected_server_ids or [],
         is_active=is_active,
     )
     db.add(sub)
@@ -1094,7 +1098,7 @@ def update_external_subscription(
     db: Session, sub: ExternalSubscription, **kwargs
 ) -> ExternalSubscription:
     for key, value in kwargs.items():
-        if hasattr(sub, key) and value is not None:
+        if hasattr(sub, key):
             setattr(sub, key, value)
     db.commit()
     db.refresh(sub)
@@ -1123,7 +1127,7 @@ def update_proxy_pool_server(
     db: Session, server: ProxyPoolServer, **kwargs
 ) -> ProxyPoolServer:
     for key, value in kwargs.items():
-        if hasattr(server, key) and value is not None:
+        if hasattr(server, key):
             setattr(server, key, value)
     db.commit()
     db.refresh(server)
